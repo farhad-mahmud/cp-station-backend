@@ -49,6 +49,28 @@ public class AddResourceHandler implements HttpHandler {
                 if (key.equals("topic")) topic = value;
             }
 
+            // validation check,, if title/ url/types are empty or not ..
+            
+                if (title == null || title.isEmpty() ||
+                url == null || url.isEmpty() ||
+                type == null || type.isEmpty() ||
+                topic == null || topic.isEmpty()) {
+
+                String errorResponse = "{\"status\":\"error\",\"message\":\"Missing required fields\"}";
+
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+
+                exchange.sendResponseHeaders(400, errorResponse.getBytes().length);
+
+                OutputStream os = exchange.getResponseBody();
+                os.write(errorResponse.getBytes());
+                os.close();
+
+                conn.close();
+                return;
+}
+
             String insert = "INSERT INTO resources(title, url, type) " +
                 "VALUES (?, ?, ?) RETURNING id";
 
