@@ -22,13 +22,13 @@ public class Server {
         server.createContext("/topics" , new GetTopicsHandler());
 
         // post resources 
-        server.createContext( "/add-resource", new AddResourceHandler()) ;
-
+        System.out.println("REGISTERING /add-resource HANDLER");
+        server.createContext("/add-resource", new AddResourceHandler());
         //thread executor..
         server.setExecutor(null);
         server.start();
 
-        System.out.println("Server started on port 8080");
+        System.out.println(" yo Server started on port 8080");
     }
 
     // this class handles requests.. 

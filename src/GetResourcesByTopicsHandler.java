@@ -5,11 +5,12 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 
+// getrequest 
 // backend api to get resources according to topics from database ..
 public class GetResourcesByTopicsHandler implements HttpHandler {
 
     public void handle(HttpExchange exchange) {
-
+         System.out.println(" HIT /add-resource API");
         try {
 
             String dburl = "jdbc:postgresql://localhost:5432/postgres";

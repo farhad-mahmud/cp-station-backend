@@ -7,7 +7,7 @@ import java.sql.*;
 public class AddResourceHandler implements HttpHandler {
 
     public void handle(HttpExchange exchange) {
-
+            
         try {
 
             // CORS
@@ -44,7 +44,7 @@ public class AddResourceHandler implements HttpHandler {
             String url = extract(body, "url");
             String type = extract(body, "type");
             String topic = extract(body, "topic");
-
+        
              // validation check if title , empty or not
 
             if (isEmpty(title) || isEmpty(url) || isEmpty(type) || isEmpty(topic)) {
@@ -61,7 +61,7 @@ public class AddResourceHandler implements HttpHandler {
             String user = "farhadmahmud";
             String password = "1234";
 
-            Class.forName("org.postgresql.Driver");
+            // Class.forName("org.postgresql.Driver");
 
             Connection conn = DriverManager.getConnection(dbUrl, user, password);
 
@@ -104,6 +104,7 @@ public class AddResourceHandler implements HttpHandler {
 
            // response / results
 
+            System.out.println("TYPE='" + type + "'");
 
             String response =
                     "{\"status\":\"success\",\"resourceId\":" + resourceId + "}";
@@ -132,7 +133,7 @@ public class AddResourceHandler implements HttpHandler {
 
    //  extract json ..
     // by json perser..
-    
+
     private String extract(String body, String key) {
         try {
             String pattern = "\"" + key + "\":\"";
