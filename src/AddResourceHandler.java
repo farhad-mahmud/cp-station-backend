@@ -1,152 +1,150 @@
-
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import java.io.OutputStream;
-import java.net.URLDecoder;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
-// post request ..
 
 public class AddResourceHandler implements HttpHandler {
 
-    public void handle (HttpExchange exchange){
-           try {
-               
-            //cors..
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin" , "*") ;
+    public void handle(HttpExchange exchange) {
+
+        try {
+
+            // CORS
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+
+            // only allow POST
+            if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+                String res = "{\"status\":\"error\",\"message\":\"Only POST allowed\"}";
+                exchange.sendResponseHeaders(405, res.getBytes().length);
+                exchange.getResponseBody().write(res.getBytes());
+                exchange.getResponseBody().close();
+                return;
+            }
+
+             // read request .
+            InputStreamReader isr =
+                    new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8);
+
+            BufferedReader br = new BufferedReader(isr);
+
+            StringBuilder sb = new StringBuilder();
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+
+            String body = sb.toString();
+
+            // manual json parsing..
+
+            String title = extract(body, "title");
+            String url = extract(body, "url");
+            String type = extract(body, "type");
+            String topic = extract(body, "topic");
+
+             // validation check if title , empty or not
+
+            if (isEmpty(title) || isEmpty(url) || isEmpty(type) || isEmpty(topic)) {
+                String res = "{\"status\":\"error\",\"message\":\"Missing fields\"}";
+                exchange.sendResponseHeaders(400, res.getBytes().length);
+                exchange.getResponseBody().write(res.getBytes());
+                exchange.getResponseBody().close();
+                return;
+            }
 
             // db connection
 
-            String dburl = "jdbc:postgresql://localhost:5432/postgres";
+            String dbUrl = "jdbc:postgresql://localhost:5432/postgres";
             String user = "farhadmahmud";
             String password = "1234";
 
-            Connection conn = DriverManager.getConnection(dburl, user, password);
+            Class.forName("org.postgresql.Driver");
 
-            // query parameters ..
-            String query = exchange.getRequestURI().getQuery() ;
+            Connection conn = DriverManager.getConnection(dbUrl, user, password);
 
-            String[] params = query.split("&") ;
+            // insert resourcess..
 
-            String title = "";
-            String url = "";
-            String type = "";
-            String topic = "";
+            String sql =
+                    "INSERT INTO resources(title, url, type) VALUES (?, ?, ?) RETURNING id";
 
-            for (String p : params) {
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, title);
+            stmt.setString(2, url);
+            stmt.setString(3, type);
 
-                String[] pair = p.split("=");
+            ResultSet rs = stmt.executeQuery();
+            rs.next();
 
-                // pair[0] is key.. like title , url, type,topic,,
-                // pair[1] is value.. like title = binarysearchguide , type = article..
+            int resourceId = rs.getInt("id");
 
-                String key = pair[0];
-                String value = URLDecoder.decode(pair[1], StandardCharsets.UTF_8);
+            // get topic id..by name..of the topic..
 
-                if (key.equals("title")) title = value;
-                if (key.equals("url")) url = value;
-                if (key.equals("type")) type = value;
-                if (key.equals("topic")) topic = value;
-            }
+            PreparedStatement tstmt =
+                    conn.prepareStatement("SELECT id FROM topics WHERE name = ?");
 
-            // validation check,, if title/ url/types are empty or not ..
+            tstmt.setString(1, topic);
 
-                if (title == null || title.isEmpty() ||
-                url == null || url.isEmpty() ||
-                type == null || type.isEmpty() ||
-                topic == null || topic.isEmpty()) {
+            ResultSet get_topic_id = tstmt.executeQuery();
+            get_topic_id.next();
 
-                String errorResponse = "{\"status\":\"error\",\"message\":\"Missing required fields\"}";
+            int topicId = get_topic_id.getInt("id");
 
-                exchange.getResponseHeaders().set("Content-Type", "application/json");
-                exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+             // insert relation 
+            PreparedStatement rstmt =
+                    conn.prepareStatement(
+                            "INSERT INTO resource_topics(resource_id, topic_id) VALUES (?, ?)");
 
-                exchange.sendResponseHeaders(400, errorResponse.getBytes().length);
+            rstmt.setInt(1, resourceId);
+            rstmt.setInt(2, topicId);
 
-                OutputStream os = exchange.getResponseBody();
-                os.write(errorResponse.getBytes());
-                os.close();
+            rstmt.executeUpdate();
 
-                conn.close();
-                return;
-}
+           // response / results
 
-            String insert = "INSERT INTO resources(title, url, type) " +
-                "VALUES (?, ?, ?) RETURNING id";
-
-            PreparedStatement insertstmt = conn.prepareStatement(insert);
-
-            insertstmt.setString(1 , title) ;
-            insertstmt.setString(2, url);
-            insertstmt.setString(3, type);
-
-
-            ResultSet insertedResource = insertstmt.executeQuery();
-
-             insertedResource.next();
-
-            int resourceId = insertedResource.getInt("id");
-
-            // FIND TOPIC ID
-            String topicSql =
-                "SELECT id FROM topics WHERE name = ?";
-
-            PreparedStatement topicStmt =
-                conn.prepareStatement(topicSql);
-
-            topicStmt.setString(1, topic);
-
-            ResultSet topicResult = topicStmt.executeQuery();
-
-            topicResult.next();
-
-            int topicId = topicResult.getInt("id");
-
-
-            String relationSql =
-                "INSERT INTO resource_topics(resource_id, topic_id) " +
-                "VALUES (?, ?)";
-
-            PreparedStatement relationStmt =
-                conn.prepareStatement(relationSql);
-
-            relationStmt.setInt(1, resourceId);
-            relationStmt.setInt(2, topicId);
-
-            relationStmt.executeUpdate();
-
-            // SUCCESS RESPONSE
 
             String response =
-            "{\"status\":\"success\",\"resourceId\":" + resourceId + "}";
-
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+                    "{\"status\":\"success\",\"resourceId\":" + resourceId + "}";
 
             exchange.sendResponseHeaders(200, response.getBytes().length);
+            exchange.getResponseBody().write(response.getBytes());
+            exchange.getResponseBody().close();
 
-            OutputStream os = exchange.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
+            conn.close();
 
+        } catch (Exception e) {
+            e.printStackTrace();
 
-           } catch (Exception e) {
-                e.printStackTrace();
-
-               try {
-
-                String error = "Server error: " + e.getMessage();
+            try {
+                String error =
+                        "{\"status\":\"error\",\"message\":\"" + e.getMessage() + "\"}";
 
                 exchange.sendResponseHeaders(500, error.getBytes().length);
-
                 exchange.getResponseBody().write(error.getBytes());
-
                 exchange.getResponseBody().close();
 
-               } catch (Exception ignored) {
-                    
-               }
-               
-           }
+            } catch (Exception ignored) {}
+        }
+    }
+
+
+   //  extract json ..
+    // by json perser..
+    
+    private String extract(String body, String key) {
+        try {
+            String pattern = "\"" + key + "\":\"";
+            int start = body.indexOf(pattern) + pattern.length();
+            int end = body.indexOf("\"", start);
+            return body.substring(start, end);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private boolean isEmpty(String s) {
+        return s == null || s.trim().isEmpty();
     }
 }
