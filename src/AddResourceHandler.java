@@ -50,7 +50,7 @@ public class AddResourceHandler implements HttpHandler {
             }
 
             // validation check,, if title/ url/types are empty or not ..
-            
+
                 if (title == null || title.isEmpty() ||
                 url == null || url.isEmpty() ||
                 type == null || type.isEmpty() ||
@@ -83,7 +83,7 @@ public class AddResourceHandler implements HttpHandler {
 
             ResultSet insertedResource = insertstmt.executeQuery();
 
-            insertedResource.next();
+             insertedResource.next();
 
             int resourceId = insertedResource.getInt("id");
 
@@ -117,17 +117,17 @@ public class AddResourceHandler implements HttpHandler {
 
             // SUCCESS RESPONSE
 
-            String response = "Resource added successfully";
+            String response =
+            "{\"status\":\"success\",\"resourceId\":" + resourceId + "}";
+
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 
             exchange.sendResponseHeaders(200, response.getBytes().length);
 
             OutputStream os = exchange.getResponseBody();
-
             os.write(response.getBytes());
-
             os.close();
-
-            conn.close();
 
 
            } catch (Exception e) {
