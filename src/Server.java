@@ -21,6 +21,9 @@ public class Server {
 
         server.createContext("/topics" , new GetTopicsHandler());
 
+        // post resources 
+        server.createContext( "/add-resource", new AddResourceHandler()) ;
+
         //thread executor..
         server.setExecutor(null);
         server.start();
