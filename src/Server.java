@@ -22,8 +22,13 @@ public class Server {
         server.createContext("/topics" , new GetTopicsHandler());
 
         // post resources 
-        System.out.println("REGISTERING /add-resource HANDLER");
         server.createContext("/add-resource", new AddResourceHandler());
+
+        // get categories..
+        server.createContext("/categories", new GetCategoriesHandler());
+
+        // get topics by categories 
+        server.createContext("/topics-by-category", new GetTopicsByCategoryHandler());
         //thread executor..
         server.setExecutor(null);
         server.start();

@@ -15,7 +15,7 @@ public class GetCategoriesHandler implements HttpHandler {
                 "1234"
             );
 
-            String sql = "SELECT id, name FROM categories";
+            String sql = "SELECT id, category_name FROM categories";
             PreparedStatement stmt = conn.prepareStatement(sql);
             ResultSet rs = stmt.executeQuery();
 
@@ -29,7 +29,7 @@ public class GetCategoriesHandler implements HttpHandler {
 
                 response.append("{")
                         .append("\"id\":").append(rs.getInt("id")).append(",")
-                        .append("\"name\":\"").append(rs.getString("name")).append("\"")
+                        .append("\"category_name\":\"").append(rs.getString("category_name")).append("\"")
                         .append("}");
             }
 

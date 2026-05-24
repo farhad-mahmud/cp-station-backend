@@ -10,7 +10,7 @@ import java.sql.*;
 public class GetResourcesByTopicsHandler implements HttpHandler {
 
     public void handle(HttpExchange exchange) {
-         System.out.println(" HIT /add-resource API");
+
         try {
 
             String dburl = "jdbc:postgresql://localhost:5432/postgres";

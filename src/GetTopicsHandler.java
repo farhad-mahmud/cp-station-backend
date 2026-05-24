@@ -2,7 +2,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.OutputStream;
 import java.sql.*;
-
+//getrequest ..
 
 // backend api to retrieve topics from .. database..
 public class GetTopicsHandler implements HttpHandler {
