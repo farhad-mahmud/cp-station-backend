@@ -27,12 +27,10 @@ public class GetResourcesByTopicsHandler implements HttpHandler {
 
             Connection conn = DriverManager.getConnection(dburl, user, password);
 
-            String sql =
-                "SELECT r.id, r.title ,r.url , r.type " +
-                "FROM resources r " +
-                "JOIN resource_topics rt ON r.id = rt.resource_id " +
-                "JOIN topics t ON t.id = rt.topic_id " +
-                "WHERE t.name = ?";
+            String sql =               
+                "SELECT id, title, url, type " +
+                "FROM resources " +
+                "WHERE topic_id = (SELECT id FROM topics WHERE name = ?)";
 
             // preparedstatement is sequred this is how java sends sql query ..
 
