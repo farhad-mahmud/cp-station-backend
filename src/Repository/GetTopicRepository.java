@@ -18,6 +18,8 @@ public class GetTopicRepository {
         String sql =
                 "SELECT name FROM topics";
 
+        // sequerly send sql qeury (protects from sql injection);
+        
         PreparedStatement stmt =
                 conn.prepareStatement(sql);
 

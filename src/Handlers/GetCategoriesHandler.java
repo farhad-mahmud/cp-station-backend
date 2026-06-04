@@ -1,16 +1,15 @@
 package Handlers;
 
 import Services.CategoryService;
-import Services.CategoryService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.OutputStream;
 import java.util.List;
+import models.Category;
 
-public class GetCategoriesHandler
-        implements HttpHandler {
+public class GetCategoriesHandler implements HttpHandler {
 
-    private CategoryService cat_service =
+    private CategoryService service =
             new CategoryService();
 
     @Override
@@ -18,57 +17,52 @@ public class GetCategoriesHandler
 
         try {
 
-            List<String> topics =
-                    cat_service.getAllTopics();
+            List<Category> categories =
+                    service.getAllCategories();
 
-            String json = "[";
+            StringBuilder response =
+                    new StringBuilder("[");
 
-            for(int i=0;i<topics.size();i++) {
+            boolean first = true;
 
-                json += "\"" +
-                        topics.get(i) +
-                        "\"";
+            for (Category c : categories) {
 
-                if(i < topics.size()-1) {
-                    json += ",";
-                }
+                if (!first) response.append(",");
+                first = false;
+
+                response.append("{")
+                        .append("\"id\":").append(c.id).append(",")
+                        .append("\"category_name\":\"")
+                        .append(c.categoryName)
+                        .append("\"")
+                        .append("}");
             }
 
-            json += "]";
-        
-             // Cors important.. 
-            exchange.getResponseHeaders()
-                    .add(
-                        "Access-Control-Allow-Origin",
-                        "*"
-                    );
+            response.append("]");
 
             exchange.getResponseHeaders()
-                    .set(
-                        "Content-Type",
-                        "application/json"
-                    );
-         // http status check 200 = ok..
-         
+                    .add("Access-Control-Allow-Origin", "*");
+
+            exchange.getResponseHeaders()
+                    .set("Content-Type", "application/json");
+
             exchange.sendResponseHeaders(
                     200,
-                    json.getBytes().length
+                    response.toString().getBytes().length
             );
 
             OutputStream os =
                     exchange.getResponseBody();
 
-            os.write(json.getBytes());
-
+            os.write(response.toString().getBytes());
             os.close();
 
-        } catch(Exception e) {
+        } catch (Exception e) {
+            e.printStackTrace();
 
             try {
-
                 String error =
-                        "Server error: "
-                        + e.getMessage();
+                        "Server error: " + e.getMessage();
 
                 exchange.sendResponseHeaders(
                         500,
@@ -78,10 +72,9 @@ public class GetCategoriesHandler
                 exchange.getResponseBody()
                         .write(error.getBytes());
 
-                exchange.getResponseBody()
-                        .close();
+                exchange.getResponseBody().close();
 
-            } catch(Exception ignored) {}
+            } catch (Exception ignored) {}
         }
     }
 }
