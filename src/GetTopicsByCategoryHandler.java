@@ -15,15 +15,6 @@ public class GetTopicsByCategoryHandler implements HttpHandler {
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().set("Content-Type", "application/json");
 
-            // only GET allowed
-            if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {
-                String res = "{\"error\":\"Only GET allowed\"}";
-                exchange.sendResponseHeaders(405, res.getBytes().length);
-                exchange.getResponseBody().write(res.getBytes());
-                exchange.getResponseBody().close();
-                return;
-            }
-
             // -----------------------------
             // STEP 1: Parse query safely
             // -----------------------------
