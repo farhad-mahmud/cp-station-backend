@@ -1,16 +1,17 @@
 package Handlers;
 
-import Services.TopicService;
+import Services.CategoryService;
+import Services.CategoryService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import java.io.OutputStream;
 import java.util.List;
 
-public class GetTopicsHandler
+public class GetCategoriesHandler
         implements HttpHandler {
 
-    private TopicService topic_service =
-            new TopicService();
+    private CategoryService cat_service =
+            new CategoryService();
 
     @Override
     public void handle(HttpExchange exchange) {
@@ -18,7 +19,7 @@ public class GetTopicsHandler
         try {
 
             List<String> topics =
-                    topic_service.getAllTopics();
+                    cat_service.getAllTopics();
 
             String json = "[";
 
