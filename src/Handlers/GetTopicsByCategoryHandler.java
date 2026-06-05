@@ -1,15 +1,13 @@
 package Handlers;
 
+import Services.TopicByCatService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-
-import Services.TopicByCatService;
-import models.Topic;
-
 import java.io.OutputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import models.Topic;
 
 public class GetTopicsByCategoryHandler
         implements HttpHandler {
@@ -80,7 +78,7 @@ public class GetTopicsByCategoryHandler
             }
 
             List<Topic> topics =
-                    topicService.getTopicsByCategoryId(
+                    topicService.get_top_by_cat_id(
                             Integer.parseInt(categoryId)
                     );
 
