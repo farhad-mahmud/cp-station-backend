@@ -1,0 +1,154 @@
+package Handlers;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+
+import Services.TopicByCatService;
+import models.Topic;
+
+import java.io.OutputStream;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+public class GetTopicsByCategoryHandler
+        implements HttpHandler {
+
+    private TopicByCatService topicService =
+            new TopicByCatService ();
+
+    @Override
+    public void handle(HttpExchange exchange) {
+
+        try {
+
+            exchange.getResponseHeaders()
+                    .add(
+                        "Access-Control-Allow-Origin",
+                        "*"
+                    );
+
+            exchange.getResponseHeaders()
+                    .set(
+                        "Content-Type",
+                        "application/json"
+                    );
+
+            String query =
+                    exchange.getRequestURI()
+                            .getQuery();
+
+            String categoryId = null;
+
+            if(query != null) {
+
+                for(String param :
+                        query.split("&")) {
+
+                    String[] pair =
+                            param.split("=");
+
+                    if(pair.length == 2 &&
+                       pair[0].equals("categoryId")) {
+
+                        categoryId =
+                                URLDecoder.decode(
+                                        pair[1],
+                                        StandardCharsets.UTF_8
+                                );
+                    }
+                }
+            }
+
+            if(categoryId == null) {
+
+                String error =
+                        "{\"error\":\"Missing categoryId\"}";
+
+                exchange.sendResponseHeaders(
+                        400,
+                        error.getBytes().length
+                );
+
+                exchange.getResponseBody()
+                        .write(error.getBytes());
+
+                exchange.getResponseBody()
+                        .close();
+
+                return;
+            }
+
+            List<Topic> topics =
+                    topicService.getTopicsByCategoryId(
+                            Integer.parseInt(categoryId)
+                    );
+
+            StringBuilder response =
+                    new StringBuilder("[");
+
+            boolean first = true;
+
+            for(Topic topic : topics) {
+
+                if(!first)
+                    response.append(",");
+
+                first = false;
+
+                response.append("{")
+                        .append("\"id\":")
+                        .append(topic.id)
+                        .append(",")
+
+                        .append("\"name\":\"")
+                        .append(topic.name)
+                        .append("\"")
+
+                        .append("}");
+            }
+
+            response.append("]");
+
+            exchange.sendResponseHeaders(
+                    200,
+                    response.toString()
+                            .getBytes()
+                            .length
+            );
+
+            OutputStream os =
+                    exchange.getResponseBody();
+
+            os.write(
+                    response.toString().getBytes()
+            );
+
+            os.close();
+
+        } catch(Exception e) {
+
+            e.printStackTrace();
+
+            try {
+
+                String error =
+                        "{\"error\":\""
+                        + e.getMessage()
+                        + "\"}";
+
+                exchange.sendResponseHeaders(
+                        500,
+                        error.getBytes().length
+                );
+
+                exchange.getResponseBody()
+                        .write(error.getBytes());
+
+                exchange.getResponseBody()
+                        .close();
+
+            } catch(Exception ignored) {}
+        }
+    }
+}
