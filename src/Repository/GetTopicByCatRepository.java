@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GetTopicByCatRepository {
+    
     public List<Topic> getTopicsByCategoryId(int categoryId)
         throws Exception {
 

@@ -32,6 +32,7 @@ public class GetTopicsByCategoryHandler
                         "application/json"
                     );
 
+                   
             String query =
                     exchange.getRequestURI()
                             .getQuery();
@@ -78,7 +79,7 @@ public class GetTopicsByCategoryHandler
             }
 
             List<Topic> topics =
-                    topicService.get_top_by_cat_id(
+                    topicService.getTopicsByCategoryId(
                             Integer.parseInt(categoryId)
                     );
 

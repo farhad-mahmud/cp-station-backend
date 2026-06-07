@@ -1,4 +1,5 @@
 import Handlers.GetCategoriesHandler;
+import Handlers.GetTopicsByCategoryHandler;
 import Handlers.GetTopicsHandler;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -32,6 +33,7 @@ public class Server {
 
         // get topics by categories 
         server.createContext("/topics-by-category", new GetTopicsByCategoryHandler());
+
         //thread executor..
         server.setExecutor(null);
         server.start();
