@@ -36,7 +36,7 @@ public class Server {
         
         // get subtopics by topics..
         server.createContext("/subtopic-by-topic", new GetSubtopicsByTopics());
-        System.out.println("✅ subtopic-by-topic context registered");
+        System.out.println(" subtopic-by-topic context registered");
         //thread executor..
         server.setExecutor(null);
         server.start();
