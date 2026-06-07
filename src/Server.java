@@ -33,7 +33,10 @@ public class Server {
 
         // get topics by categories 
         server.createContext("/topics-by-category", new GetTopicsByCategoryHandler());
-
+        
+        // get subtopics by topics..
+        server.createContext("/subtopic-by-topic", new GetSubtopicsByTopics());
+        System.out.println("✅ subtopic-by-topic context registered");
         //thread executor..
         server.setExecutor(null);
         server.start();

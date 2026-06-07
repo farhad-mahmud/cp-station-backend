@@ -17,32 +17,34 @@ public class GetSubtopicsByTopics implements HttpHandler {
         Connection conn = null;
 
         try {
-            // Load driver
             Class.forName("org.postgresql.Driver");
-            System.out.println("Driver loaded successfully");
 
-            // Get query param: ?topic=DP
+            // -----------------------------
+            // STEP 1: read topicId
+            // -----------------------------
             String query = exchange.getRequestURI().getQuery();
 
             if (query == null || !query.contains("=")) {
-                sendError(exchange, 400, "Missing topic parameter");
+                sendError(exchange, 400, "Missing topicId parameter");
                 return;
             }
 
-            String topicName = URLDecoder.decode(
-                    query.split("=")[1],
-                    StandardCharsets.UTF_8
+            int topicId = Integer.parseInt(
+                    URLDecoder.decode(query.split("=")[1], StandardCharsets.UTF_8)
             );
 
             conn = DriverManager.getConnection(dburl, user, password);
 
+            // -----------------------------
+            // STEP 2: UPDATED SQL (IMPORTANT CHANGE ONLY HERE)
+            // -----------------------------
             String sql =
                     "SELECT id, name " +
                     "FROM subtopics " +
-                    "WHERE topic_id = (SELECT id FROM topics WHERE name = ?)";
+                    "WHERE topic_id = ?";
 
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, topicName);
+            stmt.setInt(1, topicId);
 
             ResultSet rs = stmt.executeQuery();
 
@@ -56,18 +58,14 @@ public class GetSubtopicsByTopics implements HttpHandler {
                 if (!first) response.append(",");
                 first = false;
 
-                int id = rs.getInt("id");
-                String name = rs.getString("name");
-
                 response.append("{")
-                        .append("\"id\":").append(id).append(",")
-                        .append("\"name\":\"").append(name).append("\"")
+                        .append("\"id\":").append(rs.getInt("id")).append(",")
+                        .append("\"name\":\"").append(rs.getString("name")).append("\"")
                         .append("}");
             }
 
             response.append("]");
 
-            // Headers
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
 
