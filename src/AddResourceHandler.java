@@ -42,11 +42,11 @@ public class AddResourceHandler implements HttpHandler {
             String title = extract(body, "title");
             String url = extract(body, "url");
             String type = extract(body, "type");
-            String topic = extract(body, "topic");
-            String subtopic = extract(body, "subtopic"); // may be empty if not sent
+            String topicId = extract(body, "topicId");       // now an id, not a name
+            String subtopicId = extract(body, "subtopicId"); // may be empty if not sent
 
-            // validation — title, url, type, topic are required
-            if (isEmpty(title) || isEmpty(url) || isEmpty(type) || isEmpty(topic)) {
+            // validation — title, url, type, topicId are required
+            if (isEmpty(title) || isEmpty(url) || isEmpty(type) || isEmpty(topicId)) {
                 String res = "{\"status\":\"error\",\"message\":\"Missing fields\"}";
                 exchange.sendResponseHeaders(400, res.getBytes().length);
                 exchange.getResponseBody().write(res.getBytes());
@@ -61,32 +61,6 @@ public class AddResourceHandler implements HttpHandler {
 
             Connection conn = DriverManager.getConnection(dbUrl, user, password);
 
-            int topicId;
-            Integer subtopicId = null; // stays null if no subtopic
-
-            if (!isEmpty(subtopic)) {
-                // subtopic given — look up subtopic id AND its parent topic_id
-                PreparedStatement sstmt = conn.prepareStatement(
-                        "SELECT id, topic_id FROM subtopics WHERE name = ?"
-                );
-                sstmt.setString(1, subtopic);
-                ResultSet srs = sstmt.executeQuery();
-                srs.next();
-
-                subtopicId = srs.getInt("id");
-                topicId = srs.getInt("topic_id");
-
-            } else {
-                // no subtopic — get topic id by name as before
-                PreparedStatement tstmt =
-                        conn.prepareStatement("SELECT id FROM topics WHERE name = ?");
-                tstmt.setString(1, topic);
-                ResultSet trs = tstmt.executeQuery();
-                trs.next();
-
-                topicId = trs.getInt("id");
-            }
-
             // insert resource directly with topic_id and subtopic_id
             String sql =
                     "INSERT INTO resources(title, url, type, topic_id, subtopic_id) " +
@@ -96,10 +70,10 @@ public class AddResourceHandler implements HttpHandler {
             stmt.setString(1, title);
             stmt.setString(2, url);
             stmt.setString(3, type);
-            stmt.setInt(4, topicId);
+            stmt.setInt(4, Integer.parseInt(topicId));
 
-            if (subtopicId != null) {
-                stmt.setInt(5, subtopicId);
+            if (!isEmpty(subtopicId)) {
+                stmt.setInt(5, Integer.parseInt(subtopicId));
             } else {
                 stmt.setNull(5, Types.INTEGER);
             }
