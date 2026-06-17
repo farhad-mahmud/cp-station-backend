@@ -7,7 +7,7 @@ import java.sql.*;
 public class AddResourceHandler implements HttpHandler {
 
     public void handle(HttpExchange exchange) {
-            
+
         try {
 
             // CORS
@@ -23,7 +23,7 @@ public class AddResourceHandler implements HttpHandler {
                 return;
             }
 
-             // read requestttt.
+            // read request
             InputStreamReader isr =
                     new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8);
 
@@ -38,15 +38,14 @@ public class AddResourceHandler implements HttpHandler {
 
             String body = sb.toString();
 
-            // manual json parsing..
-
+            // manual json parsing
             String title = extract(body, "title");
             String url = extract(body, "url");
             String type = extract(body, "type");
             String topic = extract(body, "topic");
-        
-             // validation check if title , empty or not
+            String subtopic = extract(body, "subtopic"); // may be empty if not sent
 
+            // validation — title, url, type, topic are required
             if (isEmpty(title) || isEmpty(url) || isEmpty(type) || isEmpty(topic)) {
                 String res = "{\"status\":\"error\",\"message\":\"Missing fields\"}";
                 exchange.sendResponseHeaders(400, res.getBytes().length);
@@ -56,56 +55,61 @@ public class AddResourceHandler implements HttpHandler {
             }
 
             // db connection
-
             String dbUrl = "jdbc:postgresql://localhost:5432/postgres";
             String user = "farhadmahmud";
             String password = "1234";
 
-            // Class.forName("org.postgresql.Driver");
-
             Connection conn = DriverManager.getConnection(dbUrl, user, password);
 
-            // insert resourcess..
+            int topicId;
+            Integer subtopicId = null; // stays null if no subtopic
 
+            if (!isEmpty(subtopic)) {
+                // subtopic given — look up subtopic id AND its parent topic_id
+                PreparedStatement sstmt = conn.prepareStatement(
+                        "SELECT id, topic_id FROM subtopics WHERE name = ?"
+                );
+                sstmt.setString(1, subtopic);
+                ResultSet srs = sstmt.executeQuery();
+                srs.next();
+
+                subtopicId = srs.getInt("id");
+                topicId = srs.getInt("topic_id");
+
+            } else {
+                // no subtopic — get topic id by name as before
+                PreparedStatement tstmt =
+                        conn.prepareStatement("SELECT id FROM topics WHERE name = ?");
+                tstmt.setString(1, topic);
+                ResultSet trs = tstmt.executeQuery();
+                trs.next();
+
+                topicId = trs.getInt("id");
+            }
+
+            // insert resource directly with topic_id and subtopic_id
             String sql =
-                    "INSERT INTO resources(title, url, type) VALUES (?, ?, ?) RETURNING id";
+                    "INSERT INTO resources(title, url, type, topic_id, subtopic_id) " +
+                    "VALUES (?, ?, ?, ?, ?) RETURNING id";
 
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, title);
             stmt.setString(2, url);
             stmt.setString(3, type);
+            stmt.setInt(4, topicId);
+
+            if (subtopicId != null) {
+                stmt.setInt(5, subtopicId);
+            } else {
+                stmt.setNull(5, Types.INTEGER);
+            }
 
             ResultSet rs = stmt.executeQuery();
             rs.next();
 
             int resourceId = rs.getInt("id");
 
-            // get topic id..by name..of the topic..
-
-            PreparedStatement tstmt =
-                    conn.prepareStatement("SELECT id FROM topics WHERE name = ?");
-
-            tstmt.setString(1, topic);
-
-            ResultSet get_topic_id = tstmt.executeQuery();
-            get_topic_id.next();
-
-            int topicId = get_topic_id.getInt("id");
-
-             // insert relation 
-            PreparedStatement rstmt =
-                    conn.prepareStatement(
-                            "INSERT INTO resource_topics(resource_id, topic_id) VALUES (?, ?)");
-
-            rstmt.setInt(1, resourceId);
-            rstmt.setInt(2, topicId);
-
-            rstmt.executeUpdate();
-
-           // response / results
-
-            System.out.println("TYPE='" + type + "'");
-
+            // response
             String response =
                     "{\"status\":\"success\",\"resourceId\":" + resourceId + "}";
 
@@ -130,10 +134,7 @@ public class AddResourceHandler implements HttpHandler {
         }
     }
 
-
-   //  extract json ..
-    // by json perser..
-
+    // extract json by simple parsing
     private String extract(String body, String key) {
         try {
             String pattern = "\"" + key + "\":\"";
