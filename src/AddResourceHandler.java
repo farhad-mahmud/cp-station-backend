@@ -109,16 +109,30 @@ public class AddResourceHandler implements HttpHandler {
     }
 
     // extract json by simple parsing
-    private String extract(String body, String key) {
-        try {
-            String pattern = "\"" + key + "\":\"";
-            int start = body.indexOf(pattern) + pattern.length();
-            int end = body.indexOf("\"", start);
-            return body.substring(start, end);
-        } catch (Exception e) {
-            return "";
-        }
+    
+   private String extract(String body, String key) {
+    try {
+        String searchKey = "\"" + key + "\"";
+        int keyIndex = body.indexOf(searchKey);
+        if (keyIndex == -1) return "";
+
+        int colon = body.indexOf(":", keyIndex + searchKey.length());
+        if (colon == -1) return "";
+
+        int i = colon + 1;
+        while (i < body.length() && Character.isWhitespace(body.charAt(i))) i++;
+
+        if (i >= body.length() || body.charAt(i) != '"') return "";
+
+        int start = i + 1;
+        int end = body.indexOf("\"", start);
+        if (end == -1) return "";
+
+        return body.substring(start, end);
+    } catch (Exception e) {
+        return "";
     }
+}
 
     private boolean isEmpty(String s) {
         return s == null || s.trim().isEmpty();
