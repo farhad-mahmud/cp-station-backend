@@ -31,7 +31,7 @@ public class AddResourceHandler implements HttpHandler {
             try (InputStream is = exchange.getRequestBody()) {
                 body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             }
-
+          
             // JSON parsing (SAFE)
             JsonNode json = mapper.readTree(body);
 
