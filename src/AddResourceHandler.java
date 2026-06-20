@@ -93,7 +93,7 @@ public class AddResourceHandler implements HttpHandler {
         }
     }
 
-    // helper: safe JSON field read
+    helper: safe JSON field read
     private String getText(JsonNode json, String key) {
         JsonNode node = json.get(key);
         return (node == null || node.isNull()) ? "" : node.asText();
