@@ -30,7 +30,7 @@ public class PasswordUtil {
     }
 
     public static void main(String[] args) {
-        String password = "imtheadminbitch";
+        String password = "testpassword123";
 
         String salt = generateSalt();
         String hashed = hash(password, salt);
@@ -38,7 +38,7 @@ public class PasswordUtil {
         System.out.println("Salt: " + salt);
         System.out.println("Hash: " + hashed);
 
-        boolean correct = verify("imtheadminbitch", salt, hashed);
+        boolean correct = verify("testpassword123", salt, hashed);
         boolean wrong = verify("wrongpassword", salt, hashed);
 
         System.out.println("Correct password verifies: " + correct);
