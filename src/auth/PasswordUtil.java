@@ -30,18 +30,12 @@ public class PasswordUtil {
     }
 
     public static void main(String[] args) {
-        String password = "testpassword123";
+        String password = "testuser123"; // a throwaway test password, fine to keep simple
 
         String salt = generateSalt();
         String hashed = hash(password, salt);
 
-        System.out.println("Salt: " + salt);
-        System.out.println("Hash: " + hashed);
-
-        boolean correct = verify("testpassword123", salt, hashed);
-        boolean wrong = verify("wrongpassword", salt, hashed);
-
-        System.out.println("Correct password verifies: " + correct);
-        System.out.println("Wrong password verifies: " + wrong);
+        System.out.println("salt: " + salt);
+        System.out.println("hash: " + hashed);
     }
 }
