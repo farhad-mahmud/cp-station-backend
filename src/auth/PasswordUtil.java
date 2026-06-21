@@ -30,12 +30,15 @@ public class PasswordUtil {
     }
 
     public static void main(String[] args) {
-        String password = "testuser123"; // a throwaway test password, fine to keep simple
+       String password = "testuser123";
+    String storedSalt = "iaIxhMhiGDvBfLijza8UmQ==";
+    String storedHash = "ouosBvxT1Xup0BttYkKEIo6Y6TKltk63xzGtV4ogo+s=";
 
-        String salt = generateSalt();
-        String hashed = hash(password, salt);
+    String computedHash = hash(password, storedSalt);
 
-        System.out.println("salt: " + salt);
-        System.out.println("hash: " + hashed);
+    System.out.println("Computed hash: " + computedHash);
+    System.out.println("Stored hash:   " + storedHash);
+    System.out.println("Match: " + computedHash.equals(storedHash));
+
     }
 }
