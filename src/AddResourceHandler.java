@@ -16,7 +16,7 @@ public class AddResourceHandler implements HttpHandler {
 
         try {
 
-            // CORS
+            // CORS .. response headers.. 
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().set("Content-Type", "application/json");
 
@@ -93,7 +93,8 @@ public class AddResourceHandler implements HttpHandler {
         }
     }
 
-    helper: safe JSON field read
+    //helper: safe JSON field read
+    
     private String getText(JsonNode json, String key) {
         JsonNode node = json.get(key);
         return (node == null || node.isNull()) ? "" : node.asText();

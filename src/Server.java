@@ -1,6 +1,7 @@
 import Handlers.GetCategoriesHandler;
 import Handlers.GetTopicsByCategoryHandler;
 import Handlers.GetTopicsHandler;
+import auth.LoginHandler;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -18,6 +19,8 @@ public class Server {
         // creating route /endpoint = similar to framework
         server.createContext("/", new RootHandler());
 
+        // handle login 
+        server.createContext("/login", new LoginHandler());
         // get resource by topics api .. in server . 
 
         server.createContext("/resources-by-topic", new GetResourcesByTopicsHandler());
