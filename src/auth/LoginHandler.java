@@ -53,6 +53,7 @@ public class LoginHandler implements HttpHandler {
             PreparedStatement stmt = conn.prepareStatement(
                 "SELECT id, password_hash, salt, role FROM users WHERE email = ?"
             );
+
             stmt.setString(1, req.email);
             ResultSet rs = stmt.executeQuery();
 
@@ -67,7 +68,17 @@ public class LoginHandler implements HttpHandler {
             String salt = rs.getString("salt");
             String role = rs.getString("role");
 
-            boolean valid = PasswordUtil.verify(req.password, salt, storedHash);
+
+        // ── TEMPORARY DEBUG LOGGING ──
+            System.out.println("Email received: [" + req.email + "]");
+System.out.println("Password received: [" + req.password + "]");
+System.out.println("Salt from DB: [" + salt + "]");
+System.out.println("Stored hash from DB: [" + storedHash + "]");
+
+boolean valid = PasswordUtil.verify(req.password, salt, storedHash);
+System.out.println("Verify result: " + valid);
+// ── END DEBUG ──
+
 
             if (!valid) {
                 sendError(exchange, 401, "Invalid email or password");
