@@ -2,11 +2,12 @@ import Handlers.GetCategoriesHandler;
 import Handlers.GetTopicsByCategoryHandler;
 import Handlers.GetTopicsHandler;
 import auth.LoginHandler;
+import auth.MeHandler;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
-import java.net.InetSocketAddress ;
+import java.net.InetSocketAddress;
 
 
 public class Server {
@@ -22,6 +23,7 @@ public class Server {
         // handle login 
         server.createContext("/login", new LoginHandler());
         // get resource by topics api .. in server . 
+        server.createContext("/me", new MeHandler());
 
         server.createContext("/resources-by-topic", new GetResourcesByTopicsHandler());
         // get topics.. by api
