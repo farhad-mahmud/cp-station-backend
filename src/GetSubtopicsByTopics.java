@@ -1,5 +1,6 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import config.DbConnection;
 import java.io.OutputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -9,10 +10,6 @@ public class GetSubtopicsByTopics implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) {
-
-        String dburl = "jdbc:postgresql://localhost:5432/postgres";
-        String user = "farhadmahmud";
-        String password = "1234";
 
         Connection conn = null;
 
@@ -33,7 +30,8 @@ public class GetSubtopicsByTopics implements HttpHandler {
                     URLDecoder.decode(query.split("=")[1], StandardCharsets.UTF_8)
             );
 
-            conn = DriverManager.getConnection(dburl, user, password);
+                 conn =
+                DbConnection.getConnection();
 
             // -----------------------------
             // STEP 2: UPDATED SQL (IMPORTANT CHANGE ONLY HERE)

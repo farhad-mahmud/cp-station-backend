@@ -1,5 +1,6 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import config.DbConnection;
 import java.io.OutputStream;
 import java.sql.*;
 
@@ -8,9 +9,7 @@ public class GetResourcesByTopicsHandler implements HttpHandler {
     public void handle(HttpExchange exchange) {
 
         try {
-            String dburl = "jdbc:postgresql://localhost:5432/postgres";
-            String user = "farhadmahmud";
-            String password = "1234";
+            
 
             Class.forName("org.postgresql.Driver");
 
@@ -29,7 +28,9 @@ public class GetResourcesByTopicsHandler implements HttpHandler {
             String key = query.split("=")[0];
             String value = query.split("=")[1];
 
-            Connection conn = DriverManager.getConnection(dburl, user, password);
+             Connection conn =
+             DbConnection.getConnection();
+                
             PreparedStatement stmt;
 
             if (key.equals("subtopicId")) {

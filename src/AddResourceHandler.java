@@ -2,6 +2,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import config.DbConnection;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -49,12 +50,9 @@ public class AddResourceHandler implements HttpHandler {
             }
 
             // DB
-            String dbUrl = "jdbc:postgresql://localhost:5432/postgres";
-            String user = "farhadmahmud";
-            String password = "1234";
-
-            Connection conn = DriverManager.getConnection(dbUrl, user, password);
-
+            Connection conn =
+            DbConnection.getConnection();
+            
             String sql = """
                 INSERT INTO resources(title, url, type, topic_id, subtopic_id)
                 VALUES (?, ?, ?, ?, ?)

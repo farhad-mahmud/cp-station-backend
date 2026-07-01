@@ -1,5 +1,6 @@
 package auth;
 
+import config.DbConnection;
 import java.sql.*;
 import java.time.LocalDateTime;
 
@@ -10,11 +11,7 @@ public class SessionUtil {
         if (token == null) return null;
 
         try {
-            String dburl = "jdbc:postgresql://localhost:5432/postgres";
-            String user = "farhadmahmud";
-            String password = "1234";
-            Class.forName("org.postgresql.Driver");
-            Connection conn = DriverManager.getConnection(dburl, user, password);
+            Connection conn = DbConnection.getConnection();
 
             PreparedStatement stmt = conn.prepareStatement(
                 "SELECT role, expires_at FROM sessions WHERE token = ?"

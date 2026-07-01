@@ -11,6 +11,8 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.time.LocalDateTime;
 import java.util.Map;
+import config.DbConnection ;
+
 
 public class LoginHandler implements HttpHandler {
 
@@ -44,11 +46,10 @@ public class LoginHandler implements HttpHandler {
             }
 
             // Step 2: Connect to DB
-            String dburl = "jdbc:postgresql://localhost:5432/postgres";
-            String dbuser = "farhadmahmud";
-            String dbpassword = "1234";
+           
             Class.forName("org.postgresql.Driver");
-            Connection conn = DriverManager.getConnection(dburl, dbuser, dbpassword);
+            
+             Connection conn = DbConnection.getConnection();
 
             PreparedStatement stmt = conn.prepareStatement(
                 "SELECT id, password_hash, salt, role FROM users WHERE email = ?"
@@ -69,15 +70,10 @@ public class LoginHandler implements HttpHandler {
             String role = rs.getString("role");
 
 
-        // ── TEMPORARY DEBUG LOGGING ──
-            System.out.println("Email received: [" + req.email + "]");
-System.out.println("Password received: [" + req.password + "]");
-System.out.println("Salt from DB: [" + salt + "]");
-System.out.println("Stored hash from DB: [" + storedHash + "]");
 
-boolean valid = PasswordUtil.verify(req.password, salt, storedHash);
-System.out.println("Verify result: " + valid);
-// ── END DEBUG ──
+            boolean valid = PasswordUtil.verify(req.password, salt, storedHash);
+
+
 
 
             if (!valid) {
