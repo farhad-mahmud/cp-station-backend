@@ -8,3 +8,6 @@ src/**/*.class
 
 # OS generated files
 .DS_Store
+
+# Documentation / temporary logs
+src/doc.txt
