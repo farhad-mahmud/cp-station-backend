@@ -1,12 +1,12 @@
 import Handlers.GetCategoriesHandler;
 import Handlers.GetTopicsByCategoryHandler;
-import Handlers.TopicsCRUDHandler;
-import Handlers.SubtopicsCRUDHandler;
 import Handlers.ResourcesCRUDHandler;
+import Handlers.SubtopicsCRUDHandler;
+import Handlers.TopicsCRUDHandler;
 import auth.LoginHandler;
+import auth.LogoutHandler;
 import auth.MeHandler;
 import auth.RegisterHandler;
-import auth.LogoutHandler;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -30,7 +30,9 @@ public class Server {
             System.err.println("Database migration failed: " + e.getMessage());
         }
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+        int port = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 8080;
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);  ;
 
 
         // creating route /endpoint = similar to framework
@@ -64,7 +66,7 @@ public class Server {
         server.setExecutor(null);
         server.start();
 
-        System.out.println(" yo Server started on port 8080");
+        System.out.println("yo Server started on port " + port);
     }
 
     // this class handles requests.. 
