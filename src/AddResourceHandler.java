@@ -10,6 +10,8 @@ import java.sql.*;
 
 public class AddResourceHandler implements HttpHandler {
 
+    private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
@@ -18,8 +20,16 @@ public class AddResourceHandler implements HttpHandler {
         try {
 
             // CORS .. response headers.. 
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+            exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
             exchange.getResponseHeaders().set("Content-Type", "application/json");
+
+            if (exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
 
             // only POST
             if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {

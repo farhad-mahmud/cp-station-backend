@@ -9,6 +9,8 @@ import java.util.List;
 public class GetTopicsHandler
         implements HttpHandler {
 
+        private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+
     private TopicService topic_service =
             new TopicService();
 
@@ -39,8 +41,11 @@ public class GetTopicsHandler
             exchange.getResponseHeaders()
                     .add(
                         "Access-Control-Allow-Origin",
-                        "*"
+                        ALLOWED_ORIGIN
                     );
+
+            exchange.getResponseHeaders()
+                    .add("Access-Control-Allow-Credentials", "true");
 
             exchange.getResponseHeaders()
                     .set(
@@ -68,6 +73,12 @@ public class GetTopicsHandler
                 String error =
                         "Server error: "
                         + e.getMessage();
+
+                exchange.getResponseHeaders()
+                        .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+
+                exchange.getResponseHeaders()
+                        .add("Access-Control-Allow-Credentials", "true");
 
                 exchange.sendResponseHeaders(
                         500,

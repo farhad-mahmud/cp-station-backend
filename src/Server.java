@@ -1,18 +1,34 @@
 import Handlers.GetCategoriesHandler;
 import Handlers.GetTopicsByCategoryHandler;
-import Handlers.GetTopicsHandler;
+import Handlers.TopicsCRUDHandler;
+import Handlers.SubtopicsCRUDHandler;
+import Handlers.ResourcesCRUDHandler;
 import auth.LoginHandler;
 import auth.MeHandler;
+import auth.RegisterHandler;
+import auth.LogoutHandler;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.sql.Connection;
+import java.sql.Statement;
 
 
 public class Server {
 
     public static void main(String[] args) throws Exception {
+
+        // Auto-run schema migrations
+        try (Connection conn = config.DbConnection.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
+            stmt.execute("ALTER TABLE subtopics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
+            System.out.println("Database migrations applied successfully: sort_order columns verified.");
+        } catch (Exception e) {
+            System.err.println("Database migration failed: " + e.getMessage());
+        }
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
@@ -22,16 +38,18 @@ public class Server {
 
         // handle login 
         server.createContext("/login", new LoginHandler());
+        server.createContext("/register", new RegisterHandler());
+        server.createContext("/logout", new LogoutHandler());
+        
         // get resource by topics api .. in server . 
         server.createContext("/me", new MeHandler());
 
         server.createContext("/resources-by-topic", new GetResourcesByTopicsHandler());
-        // get topics.. by api
 
-        server.createContext("/topics" , new GetTopicsHandler());
-
-        // post resources 
-        server.createContext("/add-resource", new AddResourceHandler());
+        server.createContext("/topics" , new TopicsCRUDHandler());
+        server.createContext("/subtopics", new SubtopicsCRUDHandler());
+        server.createContext("/resources", new ResourcesCRUDHandler());
+        server.createContext("/add-resource", new ResourcesCRUDHandler());
 
         // get categories..
         server.createContext("/categories", new GetCategoriesHandler());

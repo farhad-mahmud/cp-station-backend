@@ -9,6 +9,8 @@ import models.Category;
 
 public class GetCategoriesHandler implements HttpHandler {
 
+        private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+
     private CategoryService service =
             new CategoryService();
 
@@ -41,7 +43,10 @@ public class GetCategoriesHandler implements HttpHandler {
             response.append("]");
 
             exchange.getResponseHeaders()
-                    .add("Access-Control-Allow-Origin", "*");
+                    .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+
+            exchange.getResponseHeaders()
+                    .add("Access-Control-Allow-Credentials", "true");
 
             exchange.getResponseHeaders()
                     .set("Content-Type", "application/json");
@@ -63,6 +68,12 @@ public class GetCategoriesHandler implements HttpHandler {
             try {
                 String error =
                         "Server error: " + e.getMessage();
+
+                exchange.getResponseHeaders()
+                        .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+
+                exchange.getResponseHeaders()
+                        .add("Access-Control-Allow-Credentials", "true");
 
                 exchange.sendResponseHeaders(
                         500,

@@ -6,14 +6,16 @@ import java.sql.*;
 
 public class GetResourcesByTopicsHandler implements HttpHandler {
 
+    private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+
     public void handle(HttpExchange exchange) {
 
         try {
             
 
             Class.forName("org.postgresql.Driver");
-
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+            exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
             exchange.getResponseHeaders().set("Content-Type", "application/json");
 
             String query = exchange.getRequestURI().getQuery();
@@ -106,7 +108,8 @@ public class GetResourcesByTopicsHandler implements HttpHandler {
         try {
             String error = "{\"error\":\"" + message + "\"}";
             exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+            exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
             exchange.sendResponseHeaders(statusCode, error.getBytes().length);
             OutputStream os = exchange.getResponseBody();
             os.write(error.getBytes());

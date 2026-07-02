@@ -8,6 +8,8 @@ import java.sql.*;
 
 public class GetSubtopicsByTopics implements HttpHandler {
 
+    private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+
     @Override
     public void handle(HttpExchange exchange) {
 
@@ -37,9 +39,10 @@ public class GetSubtopicsByTopics implements HttpHandler {
             // STEP 2: UPDATED SQL (IMPORTANT CHANGE ONLY HERE)
             // -----------------------------
             String sql =
-                    "SELECT id, name " +
+                    "SELECT id, name, sort_order " +
                     "FROM subtopics " +
-                    "WHERE topic_id = ?";
+                    "WHERE topic_id = ? " +
+                    "ORDER BY CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, id ASC";
 
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setInt(1, topicId);
@@ -58,14 +61,16 @@ public class GetSubtopicsByTopics implements HttpHandler {
 
                 response.append("{")
                         .append("\"id\":").append(rs.getInt("id")).append(",")
-                        .append("\"name\":\"").append(rs.getString("name")).append("\"")
+                        .append("\"name\":\"").append(rs.getString("name")).append("\",")
+                        .append("\"sort_order\":").append(rs.getInt("sort_order"))
                         .append("}");
             }
 
             response.append("]");
 
             exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+            exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
 
             exchange.sendResponseHeaders(200, response.toString().getBytes().length);
 
@@ -86,7 +91,8 @@ public class GetSubtopicsByTopics implements HttpHandler {
             String error = "{\"error\":\"" + message + "\"}";
 
             exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+            exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
 
             exchange.sendResponseHeaders(statusCode, error.getBytes().length);
 

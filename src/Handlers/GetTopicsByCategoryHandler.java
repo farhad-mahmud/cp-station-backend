@@ -12,6 +12,8 @@ import models.Topic;
 public class GetTopicsByCategoryHandler
         implements HttpHandler {
 
+        private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+
     private TopicByCatService topicService =
             new TopicByCatService ();
 
@@ -23,8 +25,11 @@ public class GetTopicsByCategoryHandler
             exchange.getResponseHeaders()
                     .add(
                         "Access-Control-Allow-Origin",
-                        "*"
+                        ALLOWED_ORIGIN
                     );
+
+            exchange.getResponseHeaders()
+                    .add("Access-Control-Allow-Credentials", "true");
 
             exchange.getResponseHeaders()
                     .set(
@@ -64,6 +69,12 @@ public class GetTopicsByCategoryHandler
                 String error =
                         "{\"error\":\"Missing categoryId\"}";
 
+                exchange.getResponseHeaders()
+                        .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+
+                exchange.getResponseHeaders()
+                        .add("Access-Control-Allow-Credentials", "true");
+
                 exchange.sendResponseHeaders(
                         400,
                         error.getBytes().length
@@ -102,7 +113,10 @@ public class GetTopicsByCategoryHandler
 
                         .append("\"name\":\"")
                         .append(topic.name)
-                        .append("\"")
+                        .append("\",")
+
+                        .append("\"sort_order\":")
+                        .append(topic.sort_order)
 
                         .append("}");
             }
@@ -135,6 +149,12 @@ public class GetTopicsByCategoryHandler
                         "{\"error\":\""
                         + e.getMessage()
                         + "\"}";
+
+                exchange.getResponseHeaders()
+                        .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+
+                exchange.getResponseHeaders()
+                        .add("Access-Control-Allow-Credentials", "true");
 
                 exchange.sendResponseHeaders(
                         500,
