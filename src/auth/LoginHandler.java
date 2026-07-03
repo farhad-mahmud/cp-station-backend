@@ -97,7 +97,7 @@ public class LoginHandler implements HttpHandler {
             conn.close();
 
             String cookie = String.format(
-                "session_token=%s; HttpOnly; Path=/; Max-Age=%d; SameSite=Lax",
+                "session_token=%s; HttpOnly; Path=/; Max-Age=%d; SameSite=None; Secure",
                 token, 7 * 24 * 60 * 60
             );
             exchange.getResponseHeaders().add("Set-Cookie", cookie);

@@ -44,7 +44,7 @@ public class LogoutHandler implements HttpHandler {
                 conn.close();
             }
 
-            String expiredCookie = "session_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax";
+            String expiredCookie = "session_token=; HttpOnly; Path=/; Max-Age=0; SameSite=None; Secure";
             exchange.getResponseHeaders().add("Set-Cookie", expiredCookie);
 
             sendJSON(exchange, 200, Map.of("success", true));
