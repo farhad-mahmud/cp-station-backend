@@ -9,7 +9,7 @@ import models.Category;
 
 public class GetCategoriesHandler implements HttpHandler {
 
-        private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+        private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
 
     private CategoryService service =
             new CategoryService();

@@ -6,7 +6,7 @@ import java.sql.*;
 
 public class GetResourcesByTopicsHandler implements HttpHandler {
 
-    private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+    private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
 
     public void handle(HttpExchange exchange) {
 

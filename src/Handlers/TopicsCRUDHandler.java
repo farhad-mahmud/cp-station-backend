@@ -13,7 +13,7 @@ import java.util.Map;
 import Services.TopicService;
 
 public class TopicsCRUDHandler implements HttpHandler {
-    private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+    private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
     private final ObjectMapper mapper = new ObjectMapper();
     private final TopicService topicService = new TopicService();
 

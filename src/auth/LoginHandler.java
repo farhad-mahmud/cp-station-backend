@@ -20,7 +20,7 @@ public class LoginHandler implements HttpHandler {
 
     public void handle(HttpExchange exchange) {
         try {
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "http://localhost:3000");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "https://cp-station.vercel.app");
             exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
             exchange.getResponseHeaders().set("Content-Type", "application/json");
 

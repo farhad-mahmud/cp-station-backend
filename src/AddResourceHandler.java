@@ -10,7 +10,7 @@ import java.sql.*;
 
 public class AddResourceHandler implements HttpHandler {
 
-    private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+    private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
 
     private final ObjectMapper mapper = new ObjectMapper();
 

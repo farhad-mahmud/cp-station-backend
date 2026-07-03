@@ -12,7 +12,7 @@ import models.Topic;
 public class GetTopicsByCategoryHandler
         implements HttpHandler {
 
-        private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+        private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
 
     private TopicByCatService topicService =
             new TopicByCatService ();
