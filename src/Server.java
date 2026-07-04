@@ -3,6 +3,7 @@ import Handlers.GetTopicsByCategoryHandler;
 import Handlers.ResourcesCRUDHandler;
 import Handlers.SubtopicsCRUDHandler;
 import Handlers.TopicsCRUDHandler;
+import Handlers.VisitorStatsHandler;
 import auth.LoginHandler;
 import auth.LogoutHandler;
 import auth.MeHandler;
@@ -20,17 +21,19 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
 
-        // Auto-run schema migrations
+
+
+            // Auto-run schema migrations
         try (Connection conn = config.DbConnection.getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
-            stmt.execute("ALTER TABLE subtopics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
-            stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
-            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
-            System.out.println("Database migrations applied successfully: sort_order and is_interview columns verified.");
+            
+            stmt.execute("CREATE TABLE IF NOT EXISTS visitor_stats (id INT PRIMARY KEY, total_visits INT DEFAULT 0, unique_visits INT DEFAULT 0)");
+            stmt.execute("INSERT INTO visitor_stats (id, total_visits, unique_visits) VALUES (1, 0, 0) ON CONFLICT DO NOTHING");
+            System.out.println("Database migrations applied successfully: sort_order, is_interview, and visitor_stats verified.");
         } catch (Exception e) {
             System.err.println("Database migration failed: " + e.getMessage());
         }
+
 
         int port = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 8080;
 
@@ -63,7 +66,12 @@ public class Server {
         
         // get subtopics by topics..
         server.createContext("/subtopic-by-topic", new GetSubtopicsByTopics());
+        
+        // visitor tracking & insights stats
+        server.createContext("/track-visit", new VisitorStatsHandler());
+        server.createContext("/visitor-stats", new VisitorStatsHandler());
        
+
         //thread executor..
         server.setExecutor(null);
         server.start();
