@@ -39,6 +39,7 @@ public class ResourcesCRUDHandler implements HttpHandler {
                 String title = json.has("title") ? json.get("title").asText() : "";
                 String url = json.has("url") ? json.get("url").asText() : "";
                 String type = json.has("type") ? json.get("type").asText() : "";
+                boolean isInterview = json.has("is_interview") ? json.get("is_interview").asBoolean() : false;
                 
                 int topicId = 0;
                 if (json.has("topic_id")) {
@@ -60,7 +61,7 @@ public class ResourcesCRUDHandler implements HttpHandler {
                     return;
                 }
 
-                String sql = "INSERT INTO resources (title, url, type, topic_id, subtopic_id) VALUES (?, ?, ?, ?, ?) RETURNING id";
+                String sql = "INSERT INTO resources (title, url, type, topic_id, subtopic_id, is_interview) VALUES (?, ?, ?, ?, ?, ?) RETURNING id";
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 stmt.setString(1, title);
                 stmt.setString(2, url);
@@ -71,6 +72,7 @@ public class ResourcesCRUDHandler implements HttpHandler {
                 } else {
                     stmt.setInt(5, subtopicId);
                 }
+                stmt.setBoolean(6, isInterview);
 
                 ResultSet rs = stmt.executeQuery();
                 rs.next();
@@ -91,6 +93,7 @@ public class ResourcesCRUDHandler implements HttpHandler {
                 String title = json.has("title") ? json.get("title").asText() : "";
                 String url = json.has("url") ? json.get("url").asText() : "";
                 String type = json.has("type") ? json.get("type").asText() : "";
+                boolean isInterview = json.has("is_interview") ? json.get("is_interview").asBoolean() : false;
                 
                 int topicId = 0;
                 if (json.has("topic_id")) {
@@ -112,7 +115,7 @@ public class ResourcesCRUDHandler implements HttpHandler {
                     return;
                 }
 
-                String sql = "UPDATE resources SET title = ?, url = ?, type = ?, topic_id = ?, subtopic_id = ? WHERE id = ?";
+                String sql = "UPDATE resources SET title = ?, url = ?, type = ?, topic_id = ?, subtopic_id = ?, is_interview = ? WHERE id = ?";
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 stmt.setString(1, title);
                 stmt.setString(2, url);
@@ -123,7 +126,8 @@ public class ResourcesCRUDHandler implements HttpHandler {
                 } else {
                     stmt.setInt(5, subtopicId);
                 }
-                stmt.setInt(6, id);
+                stmt.setBoolean(6, isInterview);
+                stmt.setInt(7, id);
                 stmt.executeUpdate();
 
                 sendJSON(exchange, 200, Map.of("success", true));

@@ -51,6 +51,7 @@ public class TopicsCRUDHandler implements HttpHandler {
                 String name = json.has("name") ? json.get("name").asText() : "";
                 int categoryId = json.has("category_id") ? json.get("category_id").asInt() : 0;
                 int sortOrder = json.has("sort_order") ? json.get("sort_order").asInt() : 0;
+                boolean isInterview = json.has("is_interview") ? json.get("is_interview").asBoolean() : false;
 
                 if (name.isEmpty() || categoryId == 0) {
                     sendError(exchange, 400, "Missing name or category_id");
@@ -58,11 +59,12 @@ public class TopicsCRUDHandler implements HttpHandler {
                     return;
                 }
 
-                String sql = "INSERT INTO topics (name, category_id, sort_order) VALUES (?, ?, ?) RETURNING id";
+                String sql = "INSERT INTO topics (name, category_id, sort_order, is_interview) VALUES (?, ?, ?, ?) RETURNING id";
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 stmt.setString(1, name);
                 stmt.setInt(2, categoryId);
                 stmt.setInt(3, sortOrder);
+                stmt.setBoolean(4, isInterview);
                 ResultSet rs = stmt.executeQuery();
                 rs.next();
                 int id = rs.getInt("id");
@@ -81,6 +83,7 @@ public class TopicsCRUDHandler implements HttpHandler {
                 String name = json.has("name") ? json.get("name").asText() : "";
                 int categoryId = json.has("category_id") ? json.get("category_id").asInt() : 0;
                 int sortOrder = json.has("sort_order") ? json.get("sort_order").asInt() : 0;
+                boolean isInterview = json.has("is_interview") ? json.get("is_interview").asBoolean() : false;
 
                 if (name.isEmpty() || categoryId == 0) {
                     sendError(exchange, 400, "Missing name or category_id");
@@ -88,12 +91,13 @@ public class TopicsCRUDHandler implements HttpHandler {
                     return;
                 }
 
-                String sql = "UPDATE topics SET name = ?, category_id = ?, sort_order = ? WHERE id = ?";
+                String sql = "UPDATE topics SET name = ?, category_id = ?, sort_order = ?, is_interview = ? WHERE id = ?";
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 stmt.setString(1, name);
                 stmt.setInt(2, categoryId);
                 stmt.setInt(3, sortOrder);
-                stmt.setInt(4, id);
+                stmt.setBoolean(4, isInterview);
+                stmt.setInt(5, id);
                 stmt.executeUpdate();
 
                 sendJSON(exchange, 200, Map.of("success", true));

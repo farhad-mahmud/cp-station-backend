@@ -18,7 +18,7 @@ public class GetTopicByCatRepository {
             DbConnection.getConnection();
 
     String sql =
-            "SELECT id, name, sort_order FROM topics WHERE category_id = ? ORDER BY CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, id ASC";
+            "SELECT id, name, sort_order, is_interview FROM topics WHERE category_id = ? ORDER BY CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, id ASC";
 
     PreparedStatement stmt =
             conn.prepareStatement(sql);
@@ -37,7 +37,8 @@ public class GetTopicByCatRepository {
             new Topic(
                 rs.getInt("id"),
                 rs.getString("name"),
-                rs.getInt("sort_order")
+                rs.getInt("sort_order"),
+                rs.getBoolean("is_interview")
             )
         );
     }

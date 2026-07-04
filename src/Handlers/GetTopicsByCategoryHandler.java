@@ -117,6 +117,10 @@ public class GetTopicsByCategoryHandler
 
                         .append("\"sort_order\":")
                         .append(topic.sort_order)
+                        .append(",")
+
+                        .append("\"is_interview\":")
+                        .append(topic.is_interview)
 
                         .append("}");
             }

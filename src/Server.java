@@ -25,7 +25,9 @@ public class Server {
              Statement stmt = conn.createStatement()) {
             stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
             stmt.execute("ALTER TABLE subtopics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
-            System.out.println("Database migrations applied successfully: sort_order columns verified.");
+            stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
+            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
+            System.out.println("Database migrations applied successfully: sort_order and is_interview columns verified.");
         } catch (Exception e) {
             System.err.println("Database migration failed: " + e.getMessage());
         }
