@@ -18,9 +18,8 @@ public class GetSubtopicsByTopics implements HttpHandler {
         try {
             Class.forName("org.postgresql.Driver");
 
-            // -----------------------------
-            // STEP 1: read topicId
-            // -----------------------------
+            // read topic Id 
+
             String query = exchange.getRequestURI().getQuery();
 
             if (query == null || !query.contains("=")) {
@@ -35,9 +34,8 @@ public class GetSubtopicsByTopics implements HttpHandler {
                  conn =
                 DbConnection.getConnection();
 
-            // -----------------------------
-            // STEP 2: UPDATED SQL (IMPORTANT CHANGE ONLY HERE)
-            // -----------------------------
+           // updated SQL   
+           
             String sql =
                     "SELECT id, name, sort_order " +
                     "FROM subtopics " +

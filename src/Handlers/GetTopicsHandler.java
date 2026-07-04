@@ -37,7 +37,7 @@ public class GetTopicsHandler
 
             json += "]";
         
-             // Cors important.. 
+             // cors important.. 
             exchange.getResponseHeaders()
                     .add(
                         "Access-Control-Allow-Origin",
