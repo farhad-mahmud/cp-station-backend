@@ -27,9 +27,14 @@ public class Server {
         try (Connection conn = config.DbConnection.getConnection();
              Statement stmt = conn.createStatement()) {
             
+            stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
+            stmt.execute("ALTER TABLE subtopics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
+            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
+            stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
+            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
             stmt.execute("CREATE TABLE IF NOT EXISTS visitor_stats (id INT PRIMARY KEY, total_visits INT DEFAULT 0, unique_visits INT DEFAULT 0)");
             stmt.execute("INSERT INTO visitor_stats (id, total_visits, unique_visits) VALUES (1, 0, 0) ON CONFLICT DO NOTHING");
-            System.out.println("Database migrations applied successfully: sort_order, is_interview, and visitor_stats verified.");
+            System.out.println("Database migrations applied successfully: sort_order, is_interview, visitor_stats, and resources.sort_order verified.");
         } catch (Exception e) {
             System.err.println("Database migration failed: " + e.getMessage());
         }

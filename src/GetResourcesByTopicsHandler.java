@@ -38,7 +38,7 @@ public class GetResourcesByTopicsHandler implements HttpHandler {
             if (key.equals("subtopicId")) {
                 System.out.println("Fetching by subtopicId: " + value);
 
-                String sql = "SELECT id, title, url, type, is_interview FROM resources WHERE subtopic_id = ?";
+                String sql = "SELECT id, title, url, type, is_interview, sort_order FROM resources WHERE subtopic_id = ? ORDER BY CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, id ASC";
                 stmt = conn.prepareStatement(sql);
                 stmt.setInt(1, Integer.parseInt(value));
 
@@ -46,7 +46,7 @@ public class GetResourcesByTopicsHandler implements HttpHandler {
                 System.out.println("Fetching by topicId: " + value);
 
                 
-                String sql = "SELECT id, title, url, type, is_interview FROM resources WHERE topic_id = ?";
+                String sql = "SELECT id, title, url, type, is_interview, sort_order FROM resources WHERE topic_id = ? ORDER BY CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, id ASC";
                 stmt = conn.prepareStatement(sql);
                 stmt.setInt(1, Integer.parseInt(value));
 
@@ -71,13 +71,15 @@ public class GetResourcesByTopicsHandler implements HttpHandler {
                 String url = rs.getString("url");
                 String type = rs.getString("type");
                 boolean isInterview = rs.getBoolean("is_interview");
+                int sortOrder = rs.getInt("sort_order");
 
                 response.append("{")
                         .append("\"id\":").append(id).append(",")
                         .append("\"title\":\"").append(escapeJson(title)).append("\",")
                         .append("\"url\":\"").append(escapeJson(url)).append("\",")
                         .append("\"type\":\"").append(escapeJson(type)).append("\",")
-                        .append("\"is_interview\":").append(isInterview)
+                        .append("\"is_interview\":").append(isInterview).append(",")
+                        .append("\"sort_order\":").append(sortOrder)
                         .append("}");
             }
 
