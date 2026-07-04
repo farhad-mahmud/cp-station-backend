@@ -4,6 +4,7 @@ import Handlers.ResourcesCRUDHandler;
 import Handlers.SubtopicsCRUDHandler;
 import Handlers.TopicsCRUDHandler;
 import Handlers.VisitorStatsHandler;
+import Handlers.UserProfileHandler;
 import auth.LoginHandler;
 import auth.LogoutHandler;
 import auth.MeHandler;
@@ -34,7 +35,13 @@ public class Server {
             stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
             stmt.execute("CREATE TABLE IF NOT EXISTS visitor_stats (id INT PRIMARY KEY, total_visits INT DEFAULT 0, unique_visits INT DEFAULT 0)");
             stmt.execute("INSERT INTO visitor_stats (id, total_visits, unique_visits) VALUES (1, 0, 0) ON CONFLICT DO NOTHING");
-            System.out.println("Database migrations applied successfully: sort_order, is_interview, visitor_stats, and resources.sort_order verified.");
+            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT 'Coder Name'");
+            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS institute VARCHAR(255) DEFAULT 'Ex : BUBT'");
+            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS solutions_contributed INT DEFAULT 0");
+            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS completed_topics TEXT DEFAULT '[]'");
+            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS completed_subtopics TEXT DEFAULT '[]'");
+            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS solved_resources TEXT DEFAULT '[]'");
+            System.out.println("Database migrations applied successfully: sort_order, is_interview, visitor_stats, and users profiles verified.");
         } catch (Exception e) {
             System.err.println("Database migration failed: " + e.getMessage());
         }
@@ -75,6 +82,9 @@ public class Server {
         // visitor tracking & insights stats
         server.createContext("/track-visit", new VisitorStatsHandler());
         server.createContext("/visitor-stats", new VisitorStatsHandler());
+
+        // user profile persistence
+        server.createContext("/user-profile", new UserProfileHandler());
        
 
         //thread executor..

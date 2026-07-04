@@ -53,4 +53,38 @@ public class SessionUtil {
         }
         return null;
     }
+
+    // Resolves userId from session token
+    public static Integer getUserIdFromToken(String token) {
+        if (token == null) return null;
+
+        try {
+            Connection conn = DbConnection.getConnection();
+
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT user_id, expires_at FROM sessions WHERE token = ?"
+            );
+            stmt.setString(1, token);
+            ResultSet rs = stmt.executeQuery();
+
+            if (!rs.next()) {
+                conn.close();
+                return null;
+            }
+
+            Timestamp expiresAt = rs.getTimestamp("expires_at");
+            if (expiresAt.toLocalDateTime().isBefore(LocalDateTime.now())) {
+                conn.close();
+                return null; // session expired
+            }
+
+            int userId = rs.getInt("user_id");
+            conn.close();
+            return userId;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }
