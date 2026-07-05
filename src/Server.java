@@ -5,6 +5,7 @@ import Handlers.SubtopicsCRUDHandler;
 import Handlers.TopicsCRUDHandler;
 import Handlers.VisitorStatsHandler;
 import Handlers.UserProfileHandler;
+import Handlers.UserSuggestionsHandler;
 import auth.LoginHandler;
 import auth.LogoutHandler;
 import auth.MeHandler;
@@ -41,7 +42,17 @@ public class Server {
             stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS completed_topics TEXT DEFAULT '[]'");
             stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS completed_subtopics TEXT DEFAULT '[]'");
             stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS solved_resources TEXT DEFAULT '[]'");
-            System.out.println("Database migrations applied successfully: sort_order, is_interview, visitor_stats, and users profiles verified.");
+            stmt.execute("CREATE TABLE IF NOT EXISTS user_suggestions (" +
+                         "id SERIAL PRIMARY KEY, " +
+                         "user_id INT REFERENCES users(id) ON DELETE SET NULL, " +
+                         "type VARCHAR(50) NOT NULL, " +
+                         "title VARCHAR(255) NOT NULL, " +
+                         "url TEXT NOT NULL, " +
+                         "topic_id INT, " +
+                         "status VARCHAR(50) DEFAULT 'pending', " +
+                         "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                         ")");
+            System.out.println("Database migrations applied successfully: sort_order, is_interview, visitor_stats, user_suggestions and users profiles verified.");
         } catch (Exception e) {
             System.err.println("Database migration failed: " + e.getMessage());
         }
@@ -85,6 +96,10 @@ public class Server {
 
         // user profile persistence
         server.createContext("/user-profile", new UserProfileHandler());
+        
+        // user suggestions persistence
+        server.createContext("/user-suggestions", new UserSuggestionsHandler());
+        server.createContext("/my-suggestions", new UserSuggestionsHandler());
        
 
         //thread executor..
