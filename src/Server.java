@@ -34,6 +34,8 @@ public class Server {
             stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
             stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
             stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
+            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS solution_code TEXT DEFAULT ''");
+            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS solution_github_url VARCHAR(500) DEFAULT ''");
             stmt.execute("CREATE TABLE IF NOT EXISTS visitor_stats (id INT PRIMARY KEY, total_visits INT DEFAULT 0, unique_visits INT DEFAULT 0)");
             stmt.execute("INSERT INTO visitor_stats (id, total_visits, unique_visits) VALUES (1, 0, 0) ON CONFLICT DO NOTHING");
             stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT 'Coder Name'");

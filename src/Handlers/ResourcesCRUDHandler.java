@@ -42,6 +42,20 @@ public class ResourcesCRUDHandler implements HttpHandler {
                 boolean isInterview = json.has("is_interview") ? json.get("is_interview").asBoolean() : false;
                 int sortOrder = json.has("sort_order") ? json.get("sort_order").asInt() : 0;
                 
+                String solutionCode = "";
+                if (json.has("solution_code")) {
+                    solutionCode = json.get("solution_code").asText();
+                } else if (json.has("solutionCode")) {
+                    solutionCode = json.get("solutionCode").asText();
+                }
+
+                String solutionGithubUrl = "";
+                if (json.has("solution_github_url")) {
+                    solutionGithubUrl = json.get("solution_github_url").asText();
+                } else if (json.has("solutionGithubUrl")) {
+                    solutionGithubUrl = json.get("solutionGithubUrl").asText();
+                }
+                
                 int topicId = 0;
                 if (json.has("topic_id")) {
                     topicId = json.get("topic_id").asInt();
@@ -62,7 +76,7 @@ public class ResourcesCRUDHandler implements HttpHandler {
                     return;
                 }
 
-                String sql = "INSERT INTO resources (title, url, type, topic_id, subtopic_id, is_interview, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id";
+                String sql = "INSERT INTO resources (title, url, type, topic_id, subtopic_id, is_interview, sort_order, solution_code, solution_github_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 stmt.setString(1, title);
                 stmt.setString(2, url);
@@ -75,6 +89,8 @@ public class ResourcesCRUDHandler implements HttpHandler {
                 }
                 stmt.setBoolean(6, isInterview);
                 stmt.setInt(7, sortOrder);
+                stmt.setString(8, solutionCode);
+                stmt.setString(9, solutionGithubUrl);
 
                 ResultSet rs = stmt.executeQuery();
                 rs.next();
@@ -98,6 +114,20 @@ public class ResourcesCRUDHandler implements HttpHandler {
                 boolean isInterview = json.has("is_interview") ? json.get("is_interview").asBoolean() : false;
                 int sortOrder = json.has("sort_order") ? json.get("sort_order").asInt() : 0;
                 
+                String solutionCode = "";
+                if (json.has("solution_code")) {
+                    solutionCode = json.get("solution_code").asText();
+                } else if (json.has("solutionCode")) {
+                    solutionCode = json.get("solutionCode").asText();
+                }
+
+                String solutionGithubUrl = "";
+                if (json.has("solution_github_url")) {
+                    solutionGithubUrl = json.get("solution_github_url").asText();
+                } else if (json.has("solutionGithubUrl")) {
+                    solutionGithubUrl = json.get("solutionGithubUrl").asText();
+                }
+                
                 int topicId = 0;
                 if (json.has("topic_id")) {
                     topicId = json.get("topic_id").asInt();
@@ -118,7 +148,7 @@ public class ResourcesCRUDHandler implements HttpHandler {
                     return;
                 }
 
-                String sql = "UPDATE resources SET title = ?, url = ?, type = ?, topic_id = ?, subtopic_id = ?, is_interview = ?, sort_order = ? WHERE id = ?";
+                String sql = "UPDATE resources SET title = ?, url = ?, type = ?, topic_id = ?, subtopic_id = ?, is_interview = ?, sort_order = ?, solution_code = ?, solution_github_url = ? WHERE id = ?";
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 stmt.setString(1, title);
                 stmt.setString(2, url);
@@ -131,7 +161,9 @@ public class ResourcesCRUDHandler implements HttpHandler {
                 }
                 stmt.setBoolean(6, isInterview);
                 stmt.setInt(7, sortOrder);
-                stmt.setInt(8, id);
+                stmt.setString(8, solutionCode);
+                stmt.setString(9, solutionGithubUrl);
+                stmt.setInt(10, id);
                 stmt.executeUpdate();
 
                 sendJSON(exchange, 200, Map.of("success", true));
