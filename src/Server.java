@@ -29,70 +29,7 @@ public class Server {
 
 
             // Auto-run schema migrations
-        try (Connection conn = config.DbConnection.getConnection();
-             Statement stmt = conn.createStatement()) {
-            
-            stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
-            stmt.execute("ALTER TABLE subtopics ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
-            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0");
-            stmt.execute("ALTER TABLE topics ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
-            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS is_interview BOOLEAN DEFAULT FALSE");
-            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS solution_code TEXT DEFAULT ''");
-            stmt.execute("ALTER TABLE resources ADD COLUMN IF NOT EXISTS solution_github_url VARCHAR(500) DEFAULT ''");
-            stmt.execute("CREATE TABLE IF NOT EXISTS visitor_stats (id INT PRIMARY KEY, total_visits INT DEFAULT 0, unique_visits INT DEFAULT 0)");
-            stmt.execute("INSERT INTO visitor_stats (id, total_visits, unique_visits) VALUES (1, 0, 0) ON CONFLICT DO NOTHING");
-            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT 'Coder Name'");
-            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS institute VARCHAR(255) DEFAULT 'Ex : BUBT'");
-            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS solutions_contributed INT DEFAULT 0");
-            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS completed_topics TEXT DEFAULT '[]'");
-            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS completed_subtopics TEXT DEFAULT '[]'");
-            stmt.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS solved_resources TEXT DEFAULT '[]'");
-            stmt.execute("CREATE TABLE IF NOT EXISTS user_suggestions (" +
-                         "id SERIAL PRIMARY KEY, " +
-                         "user_id INT REFERENCES users(id) ON DELETE SET NULL, " +
-                         "type VARCHAR(50) NOT NULL, " +
-                         "title VARCHAR(255) NOT NULL, " +
-                         "url TEXT NOT NULL, " +
-                         "topic_id INT, " +
-                         "status VARCHAR(50) DEFAULT 'pending', " +
-                         "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
-                         ")");
-            stmt.execute("CREATE TABLE IF NOT EXISTS ai_explanations (" +
-                         "id SERIAL PRIMARY KEY, " +
-                         "resource_type VARCHAR(20) NOT NULL, " +
-                         "resource_id INTEGER NOT NULL, " +
-                         "content TEXT NOT NULL, " +
-                         "created_at TIMESTAMP NOT NULL DEFAULT now(), " +
-                         "updated_at TIMESTAMP NOT NULL DEFAULT now(), " +
-                         "CONSTRAINT unique_resource_explanation UNIQUE (resource_type, resource_id)" +
-                         ")");
-            stmt.execute("CREATE TABLE IF NOT EXISTS ai_followup_messages (" +
-                         "id SERIAL PRIMARY KEY, " +
-                         "user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, " +
-                         "resource_type VARCHAR(20) NOT NULL, " +
-                         "resource_id INTEGER NOT NULL, " +
-                         "role VARCHAR(20) NOT NULL, " +
-                         "content TEXT NOT NULL, " +
-                         "created_at TIMESTAMP NOT NULL DEFAULT now()" +
-                         ")");
-            stmt.execute("CREATE TABLE IF NOT EXISTS ai_usage_log (" +
-                         "id SERIAL PRIMARY KEY, " +
-                         "user_id INTEGER REFERENCES users(id) ON DELETE SET NULL, " +
-                         "resource_type VARCHAR(20), " +
-                         "resource_id INTEGER, " +
-                         "total_tokens INTEGER, " +
-                         "thoughts_tokens INTEGER, " +
-                         "created_at TIMESTAMP NOT NULL DEFAULT now()" +
-                         ")");
-            stmt.execute("CREATE TABLE IF NOT EXISTS ai_settings (" +
-                         "key VARCHAR(50) PRIMARY KEY, " +
-                         "value VARCHAR(255) NOT NULL" +
-                         ")");
-            stmt.execute("INSERT INTO ai_settings (key, value) VALUES ('daily_message_limit', '10') ON CONFLICT DO NOTHING");
-            System.out.println("Database migrations applied successfully: sort_order, is_interview, visitor_stats, user_suggestions, users profiles, and AI tables verified.");
-        } catch (Exception e) {
-            System.err.println("Database migration failed: " + e.getMessage());
-        }
+        
 
 
         int port = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 8080;
