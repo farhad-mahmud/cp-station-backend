@@ -6,6 +6,9 @@ import Handlers.TopicsCRUDHandler;
 import Handlers.VisitorStatsHandler;
 import Handlers.UserProfileHandler;
 import Handlers.UserSuggestionsHandler;
+import Handlers.AiExplanationHandler;
+import Handlers.AiFollowupHandler;
+import Handlers.AdminAiSettingsHandler;
 import auth.LoginHandler;
 import auth.LogoutHandler;
 import auth.MeHandler;
@@ -54,7 +57,39 @@ public class Server {
                          "status VARCHAR(50) DEFAULT 'pending', " +
                          "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                          ")");
-            System.out.println("Database migrations applied successfully: sort_order, is_interview, visitor_stats, user_suggestions and users profiles verified.");
+            stmt.execute("CREATE TABLE IF NOT EXISTS ai_explanations (" +
+                         "id SERIAL PRIMARY KEY, " +
+                         "resource_type VARCHAR(20) NOT NULL, " +
+                         "resource_id INTEGER NOT NULL, " +
+                         "content TEXT NOT NULL, " +
+                         "created_at TIMESTAMP NOT NULL DEFAULT now(), " +
+                         "updated_at TIMESTAMP NOT NULL DEFAULT now(), " +
+                         "CONSTRAINT unique_resource_explanation UNIQUE (resource_type, resource_id)" +
+                         ")");
+            stmt.execute("CREATE TABLE IF NOT EXISTS ai_followup_messages (" +
+                         "id SERIAL PRIMARY KEY, " +
+                         "user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, " +
+                         "resource_type VARCHAR(20) NOT NULL, " +
+                         "resource_id INTEGER NOT NULL, " +
+                         "role VARCHAR(20) NOT NULL, " +
+                         "content TEXT NOT NULL, " +
+                         "created_at TIMESTAMP NOT NULL DEFAULT now()" +
+                         ")");
+            stmt.execute("CREATE TABLE IF NOT EXISTS ai_usage_log (" +
+                         "id SERIAL PRIMARY KEY, " +
+                         "user_id INTEGER REFERENCES users(id) ON DELETE SET NULL, " +
+                         "resource_type VARCHAR(20), " +
+                         "resource_id INTEGER, " +
+                         "total_tokens INTEGER, " +
+                         "thoughts_tokens INTEGER, " +
+                         "created_at TIMESTAMP NOT NULL DEFAULT now()" +
+                         ")");
+            stmt.execute("CREATE TABLE IF NOT EXISTS ai_settings (" +
+                         "key VARCHAR(50) PRIMARY KEY, " +
+                         "value VARCHAR(255) NOT NULL" +
+                         ")");
+            stmt.execute("INSERT INTO ai_settings (key, value) VALUES ('daily_message_limit', '10') ON CONFLICT DO NOTHING");
+            System.out.println("Database migrations applied successfully: sort_order, is_interview, visitor_stats, user_suggestions, users profiles, and AI tables verified.");
         } catch (Exception e) {
             System.err.println("Database migration failed: " + e.getMessage());
         }
@@ -102,6 +137,13 @@ public class Server {
         // user suggestions persistence
         server.createContext("/user-suggestions", new UserSuggestionsHandler());
         server.createContext("/my-suggestions", new UserSuggestionsHandler());
+
+        // AI and Admin AI settings & tracking routes
+        server.createContext("/ai/explanation", new AiExplanationHandler());
+        server.createContext("/ai/followup", new AiFollowupHandler());
+        AdminAiSettingsHandler adminAiHandler = new AdminAiSettingsHandler();
+        server.createContext("/admin/ai/settings", adminAiHandler);
+        server.createContext("/admin/ai/usage", adminAiHandler);
        
 
         //thread executor..
