@@ -188,10 +188,11 @@ public class AiFollowupHandler implements HttpHandler {
         }
 
         // 4. Generate Response via Gemini
+        String promptMessage = message + " - simply and shortly";
         String aiResponse = GeminiService.generateFollowupResponse(
             explanationContent,
             chatHistory,
-            message,
+            promptMessage,
             userId,
             type,
             id
