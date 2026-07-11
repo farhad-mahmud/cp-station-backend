@@ -9,14 +9,19 @@ import java.util.Map;
 public class Env {
     private static final Map<String, String> envMap = new HashMap<>();
     private static boolean loaded = false;
+    private static long lastModified = 0;
 
     private static synchronized void load() {
-        if (loaded) return;
-        loaded = true;
-        
-        // Find .env in the current working directory
         File envFile = new File(".env");
         if (envFile.exists()) {
+            long modified = envFile.lastModified();
+            if (loaded && modified <= lastModified) {
+                return;
+            }
+            loaded = true;
+            lastModified = modified;
+            envMap.clear();
+            
             try (BufferedReader reader = new BufferedReader(new FileReader(envFile))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -37,9 +42,12 @@ public class Env {
                         envMap.put(key, value);
                     }
                 }
+                System.out.println("Loaded/reloaded .env configuration (keys count: " + envMap.size() + ")");
             } catch (Exception e) {
                 System.err.println("Warning: Failed to load .env file: " + e.getMessage());
             }
+        } else {
+            loaded = true;
         }
     }
 
