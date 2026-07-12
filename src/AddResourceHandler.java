@@ -96,7 +96,7 @@ public class AddResourceHandler implements HttpHandler {
             e.printStackTrace();
             try {
                 send(exchange, 500,
-                        "{\"status\":\"error\",\"message\":\"" + e.getMessage() + "\"}");
+                        "{\"status\":\"error\",\"message\":\"Internal server error\"}");
             } catch (Exception ignored) {}
         }
     }

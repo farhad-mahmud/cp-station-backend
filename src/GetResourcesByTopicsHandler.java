@@ -111,7 +111,7 @@ public class GetResourcesByTopicsHandler implements HttpHandler {
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendError(exchange, 500, "Server error: " + e.getMessage());
+            sendError(exchange, 500, "Internal server error");
         }
     }
 

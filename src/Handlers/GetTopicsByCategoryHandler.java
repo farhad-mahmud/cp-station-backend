@@ -149,10 +149,7 @@ public class GetTopicsByCategoryHandler
 
             try {
 
-                String error =
-                        "{\"error\":\""
-                        + e.getMessage()
-                        + "\"}";
+                String error = "{\"error\":\"Internal server error\"}";
 
                 exchange.getResponseHeaders()
                         .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);

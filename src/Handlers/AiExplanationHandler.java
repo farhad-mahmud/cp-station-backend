@@ -46,7 +46,7 @@ public class AiExplanationHandler implements HttpHandler {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            sendError(exchange, 500, "Server error: " + e.getMessage());
+            sendError(exchange, 500, "Internal server error");
         }
     }
 
@@ -193,7 +193,7 @@ public class AiExplanationHandler implements HttpHandler {
                 String topicName = "";
                 String categoryName = "";
                 try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT t.name as topic_name, c.name as category_name " +
+                    "SELECT t.name as topic_name, c.category_name as category_name " +
                     "FROM topics t " +
                     "LEFT JOIN categories c ON t.category_id = c.id " +
                     "WHERE t.id = ?"

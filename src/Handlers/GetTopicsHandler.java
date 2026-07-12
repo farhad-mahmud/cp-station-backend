@@ -70,9 +70,7 @@ public class GetTopicsHandler
 
             try {
 
-                String error =
-                        "Server error: "
-                        + e.getMessage();
+                String error = "{\"error\":\"Internal server error\"}";
 
                 exchange.getResponseHeaders()
                         .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);

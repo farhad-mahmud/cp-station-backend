@@ -111,7 +111,7 @@ public class Server {
 
             } catch (Exception e) {
                 e.printStackTrace();
-                  String error = "Server error: " + e.getMessage();
+                  String error = "Internal server error";
 
             try {
                 exchange.sendResponseHeaders(500, error.length());

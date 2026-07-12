@@ -45,7 +45,7 @@ public class VisitorStatsHandler implements HttpHandler {
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendError(exchange, 500, "Server Error: " + e.getMessage());
+            sendError(exchange, 500, "Internal server error");
         }
     }
 
