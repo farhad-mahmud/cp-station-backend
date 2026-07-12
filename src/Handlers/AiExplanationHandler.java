@@ -62,6 +62,17 @@ public class AiExplanationHandler implements HttpHandler {
             return;
         }
 
+        // For solutions, check authentication even for GET requests
+        if ("solution".equals(type)) {
+            String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
+            String token = SessionUtil.extractTokenFromCookies(cookieHeader);
+            Integer userId = SessionUtil.getUserIdFromToken(token);
+            if (userId == null) {
+                sendError(exchange, 401, "Unauthorized: Logged in session required.");
+                return;
+            }
+        }
+
         int id;
         try {
             id = Integer.parseInt(idStr);
@@ -88,18 +99,7 @@ public class AiExplanationHandler implements HttpHandler {
     }
 
     private void handlePost(HttpExchange exchange) throws Exception {
-        // Verification of session / user
-        String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
-        String token = SessionUtil.extractTokenFromCookies(cookieHeader);
-        Integer userId = SessionUtil.getUserIdFromToken(token);
-        String role = SessionUtil.getRoleFromToken(token);
-
-        if (userId == null) {
-            sendError(exchange, 401, "Unauthorized: Logged in session required.");
-            return;
-        }
-
-        // Parse Request Body
+        // Parse Request Body first to check resource type
         String body = readBody(exchange);
         JsonNode json = mapper.readTree(body);
         String type = json.path("type").asText("");
@@ -115,6 +115,12 @@ public class AiExplanationHandler implements HttpHandler {
             sendError(exchange, 400, "Invalid resource type. Allowed values: solution, topic, subtopic");
             return;
         }
+
+        // Verification of session / user
+        String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
+        String token = SessionUtil.extractTokenFromCookies(cookieHeader);
+        Integer userId = SessionUtil.getUserIdFromToken(token);
+        String role = SessionUtil.getRoleFromToken(token);
 
         // Check cache
         String existingContent = null;
@@ -137,10 +143,22 @@ public class AiExplanationHandler implements HttpHandler {
             return;
         }
 
-        // Overwrite or regenerate requires admin role
-        if (existingContent != null && regenerate && !"admin".equalsIgnoreCase(role)) {
-            sendError(exchange, 403, "Forbidden: Only admin users can regenerate existing cached explanations.");
-            return;
+        // If user is not logged in
+        if (userId == null) {
+            if ("solution".equals(type)) {
+                sendError(exchange, 401, "Unauthorized: Logged in session required.");
+                return;
+            }
+            if (existingContent != null && regenerate) {
+                sendError(exchange, 401, "Unauthorized: Logged in session required.");
+                return;
+            }
+        } else {
+            // Overwrite or regenerate requires admin role for logged in users
+            if (existingContent != null && regenerate && !"admin".equalsIgnoreCase(role)) {
+                sendError(exchange, 403, "Forbidden: Only admin users can regenerate existing cached explanations.");
+                return;
+            }
         }
 
         // Generate explanation via Gemini
