@@ -16,51 +16,31 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AiFollowupHandler implements HttpHandler {
-    private final ObjectMapper mapper = new ObjectMapper();
+public class AiFollowupHandler extends AbstractHttpHandler {
 
     @Override
-    public void handle(HttpExchange exchange) {
-        try {
-            String origin = exchange.getRequestHeaders().getFirst("Origin");
-            if (origin == null || origin.isEmpty()) {
-                origin = "https://cp-station.vercel.app";
-            }
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", origin);
-            exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
+    protected void processRequest(HttpExchange exchange) throws Exception {
+        String method = exchange.getRequestMethod().toUpperCase();
 
-            String method = exchange.getRequestMethod().toUpperCase();
+        // Require logged in user for all operations
+        String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
+        String token = SessionUtil.extractTokenFromCookies(cookieHeader);
+        Integer userId = SessionUtil.getUserIdFromToken(token);
 
-            if (method.equals("OPTIONS")) {
-                exchange.sendResponseHeaders(204, -1);
-                return;
-            }
+        if (userId == null) {
+            sendError(exchange, 401, "Unauthorized: Logged in session required.");
+            return;
+        }
 
-            // Require logged in user for all operations
-            String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
-            String token = SessionUtil.extractTokenFromCookies(cookieHeader);
-            Integer userId = SessionUtil.getUserIdFromToken(token);
-
-            if (userId == null) {
-                sendError(exchange, 401, "Unauthorized: Logged in session required.");
-                return;
-            }
-
-            if (method.equals("GET")) {
-                handleGet(exchange, userId);
-            } else if (method.equals("POST")) {
-                handlePost(exchange, userId);
-            } else {
-                sendError(exchange, 405, "Method not allowed");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendError(exchange, 500, "Internal server error");
+        if (method.equals("GET")) {
+            handleGet(exchange, userId);
+        } else if (method.equals("POST")) {
+            handlePost(exchange, userId);
+        } else {
+            sendError(exchange, 405, "Method not allowed");
         }
     }
+
 
     private void handleGet(HttpExchange exchange, int userId) throws Exception {
         String query = exchange.getRequestURI().getQuery();
@@ -265,24 +245,5 @@ public class AiFollowupHandler implements HttpHandler {
         }
         return params;
     }
-
-    private String readBody(HttpExchange exchange) throws IOException {
-        try (InputStream is = exchange.getRequestBody()) {
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        }
-    }
-
-    private void sendJSON(HttpExchange exchange, int status, Object data) throws IOException {
-        byte[] bytes = mapper.writeValueAsBytes(data);
-        exchange.sendResponseHeaders(status, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
-    }
-
-    private void sendError(HttpExchange exchange, int status, String msg) {
-        try {
-            sendJSON(exchange, status, Map.of("error", msg));
-        } catch (Exception ignored) {}
-    }
 }
+

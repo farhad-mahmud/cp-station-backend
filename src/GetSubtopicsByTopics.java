@@ -1,103 +1,59 @@
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
+import Handlers.AbstractHttpHandler;
 import config.DbConnection;
-import java.io.OutputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 
-public class GetSubtopicsByTopics implements HttpHandler {
-
-    private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
+public class GetSubtopicsByTopics extends AbstractHttpHandler {
 
     @Override
-    public void handle(HttpExchange exchange) {
+    protected void processRequest(HttpExchange exchange) throws Exception {
+        Class.forName("org.postgresql.Driver");
 
-        Connection conn = null;
+        String query = exchange.getRequestURI().getQuery();
 
-        try {
-            Class.forName("org.postgresql.Driver");
-
-            // read topic Id 
-
-            String query = exchange.getRequestURI().getQuery();
-
-            if (query == null || !query.contains("=")) {
-                sendError(exchange, 400, "Missing topicId parameter");
-                return;
-            }
-
-            int topicId = Integer.parseInt(
-                    URLDecoder.decode(query.split("=")[1], StandardCharsets.UTF_8)
-            );
-
-                 conn =
-                DbConnection.getConnection();
-
-           // updated SQL   
-           
-            String sql =
-                    "SELECT id, name, sort_order " +
-                    "FROM subtopics " +
-                    "WHERE topic_id = ? " +
-                    "ORDER BY CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, id ASC";
-
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, topicId);
-
-            ResultSet rs = stmt.executeQuery();
-
-            StringBuilder response = new StringBuilder();
-            response.append("[");
-
-            boolean first = true;
-
-            while (rs.next()) {
-
-                if (!first) response.append(",");
-                first = false;
-
-                response.append("{")
-                        .append("\"id\":").append(rs.getInt("id")).append(",")
-                        .append("\"name\":\"").append(rs.getString("name")).append("\",")
-                        .append("\"sort_order\":").append(rs.getInt("sort_order"))
-                        .append("}");
-            }
-
-            response.append("]");
-
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-            exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
-
-            exchange.sendResponseHeaders(200, response.toString().getBytes().length);
-
-            OutputStream os = exchange.getResponseBody();
-            os.write(response.toString().getBytes());
-            os.close();
-
-            conn.close();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendError(exchange, 500, "Internal server error");
+        if (query == null || !query.contains("=")) {
+            sendError(exchange, 400, "Missing topicId parameter");
+            return;
         }
-    }
 
-    private void sendError(HttpExchange exchange, int statusCode, String message) {
-        try {
-            String error = "{\"error\":\"" + message + "\"}";
+        int topicId = Integer.parseInt(
+                URLDecoder.decode(query.split("=")[1], StandardCharsets.UTF_8)
+        );
 
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-            exchange.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+        Connection conn = DbConnection.getConnection();
 
-            exchange.sendResponseHeaders(statusCode, error.getBytes().length);
+        String sql =
+                "SELECT id, name, sort_order " +
+                "FROM subtopics " +
+                "WHERE topic_id = ? " +
+                "ORDER BY CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END ASC, id ASC";
 
-            OutputStream os = exchange.getResponseBody();
-            os.write(error.getBytes());
-            os.close();
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setInt(1, topicId);
 
-        } catch (Exception ignored) {}
+        ResultSet rs = stmt.executeQuery();
+
+        StringBuilder response = new StringBuilder();
+        response.append("[");
+
+        boolean first = true;
+
+        while (rs.next()) {
+            if (!first) response.append(",");
+            first = false;
+
+            response.append("{")
+                    .append("\"id\":").append(rs.getInt("id")).append(",")
+                    .append("\"name\":\"").append(rs.getString("name")).append("\",")
+                    .append("\"sort_order\":").append(rs.getInt("sort_order"))
+                    .append("}");
+        }
+
+        response.append("]");
+
+        conn.close();
+        sendJSON(exchange, 200, response.toString());
     }
 }

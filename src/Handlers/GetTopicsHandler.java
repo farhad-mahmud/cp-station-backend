@@ -2,94 +2,25 @@ package Handlers;
 
 import Services.TopicService;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import java.io.OutputStream;
 import java.util.List;
 
-public class GetTopicsHandler
-        implements HttpHandler {
+public class GetTopicsHandler extends AbstractHttpHandler {
 
-        private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
-
-    private TopicService topic_service =
-            new TopicService();
+    private TopicService topic_service = new TopicService();
 
     @Override
-    public void handle(HttpExchange exchange) {
+    protected void processRequest(HttpExchange exchange) throws Exception {
+        List<String> topics = topic_service.getAllTopics();
 
-        try {
-
-            List<String> topics =
-                    topic_service.getAllTopics();
-
-            String json = "[";
-
-            for(int i=0;i<topics.size();i++) {
-
-                json += "\"" +
-                        topics.get(i) +
-                        "\"";
-
-                if(i < topics.size()-1) {
-                    json += ",";
-                }
+        StringBuilder json = new StringBuilder("[");
+        for (int i = 0; i < topics.size(); i++) {
+            json.append("\"").append(topics.get(i)).append("\"");
+            if (i < topics.size() - 1) {
+                json.append(",");
             }
-
-            json += "]";
-        
-             // cors important.. 
-            exchange.getResponseHeaders()
-                    .add(
-                        "Access-Control-Allow-Origin",
-                        ALLOWED_ORIGIN
-                    );
-
-            exchange.getResponseHeaders()
-                    .add("Access-Control-Allow-Credentials", "true");
-
-            exchange.getResponseHeaders()
-                    .set(
-                        "Content-Type",
-                        "application/json"
-                    );
-         // http status check 200 = ok..
-         
-            exchange.sendResponseHeaders(
-                    200,
-                    json.getBytes().length
-            );
-
-            OutputStream os =
-                    exchange.getResponseBody();
-
-            os.write(json.getBytes());
-
-            os.close();
-
-        } catch(Exception e) {
-
-            try {
-
-                String error = "{\"error\":\"Internal server error\"}";
-
-                exchange.getResponseHeaders()
-                        .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-
-                exchange.getResponseHeaders()
-                        .add("Access-Control-Allow-Credentials", "true");
-
-                exchange.sendResponseHeaders(
-                        500,
-                        error.getBytes().length
-                );
-
-                exchange.getResponseBody()
-                        .write(error.getBytes());
-
-                exchange.getResponseBody()
-                        .close();
-
-            } catch(Exception ignored) {}
         }
+        json.append("]");
+
+        sendJSON(exchange, 200, json.toString());
     }
 }

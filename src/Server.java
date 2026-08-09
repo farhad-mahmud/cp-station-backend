@@ -90,37 +90,15 @@ public class Server {
         System.out.println("yo Server started on port " + port);
     }
 
-    // this class handles requests.. 
-    static class RootHandler implements HttpHandler {
-        public void handle(HttpExchange exchange) {
-            try {
-
-                String response = "CP Backend is running";
-
-                // sending http status..
-                // status code 200 = ok,
-                // 404 = not found..
-                exchange.sendResponseHeaders(200, response.length());
-
-                // gets pipe to browser ..
-                OutputStream os = exchange.getResponseBody();
-                //converts string to bytes..
-                os.write(response.getBytes());
-                // closing stream
-                os.close();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                  String error = "Internal server error";
-
-            try {
-                exchange.sendResponseHeaders(500, error.length());
-                exchange.getResponseBody().write(error.getBytes());
-                exchange.getResponseBody().close();
-                } catch (Exception ignored) {}
-            }   
+    // this class handles requests using Template Method Pattern
+    static class RootHandler extends Handlers.AbstractHttpHandler {
+        @Override
+        protected void processRequest(HttpExchange exchange) throws Exception {
+            String response = "CP Backend is running";
+            sendJSON(exchange, 200, response);
         }
     }
+
 
     
 

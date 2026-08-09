@@ -2,89 +2,33 @@ package Handlers;
 
 import Services.CategoryService;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import java.io.OutputStream;
 import java.util.List;
 import models.Category;
 
-public class GetCategoriesHandler implements HttpHandler {
+public class GetCategoriesHandler extends AbstractHttpHandler {
 
-        private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
-
-    private CategoryService service =
-            new CategoryService();
+    private CategoryService service = new CategoryService();
 
     @Override
-    public void handle(HttpExchange exchange) {
+    protected void processRequest(HttpExchange exchange) throws Exception {
+        List<Category> categories = service.getAllCategories();
 
-        try {
+        StringBuilder response = new StringBuilder("[");
+        boolean first = true;
 
-            List<Category> categories =
-                    service.getAllCategories();
+        for (Category c : categories) {
+            if (!first) response.append(",");
+            first = false;
 
-            StringBuilder response =
-                    new StringBuilder("[");
-
-            boolean first = true;
-
-            for (Category c : categories) {
-
-                if (!first) response.append(",");
-                first = false;
-
-                response.append("{")
-                        .append("\"id\":").append(c.id).append(",")
-                        .append("\"category_name\":\"")
-                        .append(c.categoryName)
-                        .append("\"")
-                        .append("}");
-            }
-
-            response.append("]");
-
-            exchange.getResponseHeaders()
-                    .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-
-            exchange.getResponseHeaders()
-                    .add("Access-Control-Allow-Credentials", "true");
-
-            exchange.getResponseHeaders()
-                    .set("Content-Type", "application/json");
-
-            exchange.sendResponseHeaders(
-                    200,
-                    response.toString().getBytes().length
-            );
-
-            OutputStream os =
-                    exchange.getResponseBody();
-
-            os.write(response.toString().getBytes());
-            os.close();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-
-            try {
-                String error = "{\"error\":\"Internal server error\"}";
-
-                exchange.getResponseHeaders()
-                        .add("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-
-                exchange.getResponseHeaders()
-                        .add("Access-Control-Allow-Credentials", "true");
-
-                exchange.sendResponseHeaders(
-                        500,
-                        error.getBytes().length
-                );
-
-                exchange.getResponseBody()
-                        .write(error.getBytes());
-
-                exchange.getResponseBody().close();
-
-            } catch (Exception ignored) {}
+            response.append("{")
+                    .append("\"id\":").append(c.id).append(",")
+                    .append("\"category_name\":\"")
+                    .append(c.categoryName)
+                    .append("\"")
+                    .append("}");
         }
+
+        response.append("]");
+        sendJSON(exchange, 200, response.toString());
     }
 }

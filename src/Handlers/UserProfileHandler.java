@@ -1,12 +1,7 @@
 package Handlers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -18,50 +13,29 @@ import java.util.Map;
 import auth.SessionUtil;
 import config.DbConnection;
 
-public class UserProfileHandler implements HttpHandler {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+public class UserProfileHandler extends AbstractHttpHandler {
 
     @Override
-    public void handle(HttpExchange exchange) {
-        try {
-            String origin = exchange.getRequestHeaders().getFirst("Origin");
-            if (origin == null || origin.isEmpty()) {
-                origin = "https://cp-station.vercel.app";
-            }
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", origin);
-            exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
+    protected void processRequest(HttpExchange exchange) throws Exception {
+        String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
+        String token = SessionUtil.extractTokenFromCookies(cookieHeader);
+        Integer userId = SessionUtil.getUserIdFromToken(token);
 
-            if (exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
-                exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-                exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-                exchange.sendResponseHeaders(204, -1);
-                return;
-            }
+        if (userId == null) {
+            sendError(exchange, 401, "Unauthorized");
+            return;
+        }
 
-            String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
-            String token = SessionUtil.extractTokenFromCookies(cookieHeader);
-            Integer userId = SessionUtil.getUserIdFromToken(token);
-
-            if (userId == null) {
-                sendError(exchange, 401, "Unauthorized");
-                return;
-            }
-
-            if (exchange.getRequestMethod().equalsIgnoreCase("GET")) {
-                handleGetProfile(exchange, userId);
-            } else if (exchange.getRequestMethod().equalsIgnoreCase("POST")) {
-                handleUpdateProfile(exchange, userId);
-            } else {
-                sendError(exchange, 405, "Method Not Allowed");
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendError(exchange, 500, "Internal server error");
+        if (exchange.getRequestMethod().equalsIgnoreCase("GET")) {
+            handleGetProfile(exchange, userId);
+        } else if (exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+            handleUpdateProfile(exchange, userId);
+        } else {
+            sendError(exchange, 405, "Method Not Allowed");
         }
     }
+
 
     private void handleGetProfile(HttpExchange exchange, int userId) throws Exception {
         Connection conn = DbConnection.getConnection();
@@ -183,32 +157,6 @@ public class UserProfileHandler implements HttpHandler {
         sendJSON(exchange, 200, Map.of("success", true));
     }
 
-    private String readBody(HttpExchange exchange) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-        }
-        return sb.toString();
-    }
-
-    private void sendJSON(HttpExchange exchange, int status, Object data) throws IOException {
-        byte[] bytes = mapper.writeValueAsBytes(data);
-        exchange.sendResponseHeaders(status, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
-    }
-
-    private void sendError(HttpExchange exchange, int statusCode, String message) {
-        try {
-            Map<String, String> error = Map.of("error", message);
-            sendJSON(exchange, statusCode, error);
-        } catch (Exception ignored) {}
-    }
-
     private String escapeJson(String str) {
         if (str == null) return "";
         return str.replace("\\", "\\\\")
@@ -220,3 +168,4 @@ public class UserProfileHandler implements HttpHandler {
                   .replace("\t", "\\t");
     }
 }
+

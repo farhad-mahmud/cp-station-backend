@@ -20,79 +20,56 @@ import java.util.Map;
 import auth.SessionUtil;
 import config.DbConnection;
 
-public class UserSuggestionsHandler implements HttpHandler {
-
-    private static final ObjectMapper mapper = new ObjectMapper();
-    private static final String ALLOWED_ORIGIN = "https://cp-station.vercel.app";
+public class UserSuggestionsHandler extends AbstractHttpHandler {
 
     @Override
-    public void handle(HttpExchange exchange) {
-        try {
-            String origin = exchange.getRequestHeaders().getFirst("Origin");
-            if (origin == null || origin.isEmpty()) {
-                origin = ALLOWED_ORIGIN;
-            }
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", origin);
-            exchange.getResponseHeaders().add("Access-Control-Allow-Credentials", "true");
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
+    protected void processRequest(HttpExchange exchange) throws Exception {
+        String method = exchange.getRequestMethod().toUpperCase();
 
-            String method = exchange.getRequestMethod().toUpperCase();
+        // Extract session authentication
+        String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
+        String token = SessionUtil.extractTokenFromCookies(cookieHeader);
+        Integer userId = SessionUtil.getUserIdFromToken(token);
+        String role = SessionUtil.getRoleFromToken(token);
 
-            if (method.equals("OPTIONS")) {
-                exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
-                exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-                exchange.sendResponseHeaders(204, -1);
-                return;
-            }
+        if (userId == null) {
+            sendError(exchange, 401, "Unauthorized: Please log in to proceed.");
+            return;
+        }
 
-            // Extract session authentication
-            String cookieHeader = exchange.getRequestHeaders().getFirst("Cookie");
-            String token = SessionUtil.extractTokenFromCookies(cookieHeader);
-            Integer userId = SessionUtil.getUserIdFromToken(token);
-            String role = SessionUtil.getRoleFromToken(token);
+        String path = exchange.getRequestURI().getPath();
 
-            if (userId == null) {
-                sendError(exchange, 401, "Unauthorized: Please log in to proceed.");
-                return;
-            }
-
-            String path = exchange.getRequestURI().getPath();
-
-            if (path.equals("/my-suggestions")) {
-                if (method.equals("GET")) {
-                    handleGetMySuggestions(exchange, userId);
-                } else {
-                    sendError(exchange, 405, "Method Not Allowed");
-                }
-            } else if (path.equals("/user-suggestions")) {
-                if (method.equals("GET")) {
-                    // Admin only
-                    if (role == null || !role.equalsIgnoreCase("admin")) {
-                        sendError(exchange, 403, "Forbidden: Admin access required.");
-                        return;
-                    }
-                    handleGetAllSuggestions(exchange);
-                } else if (method.equals("POST")) {
-                    handleCreateSuggestion(exchange, userId);
-                } else if (method.equals("PUT")) {
-                    // Admin only
-                    if (role == null || !role.equalsIgnoreCase("admin")) {
-                        sendError(exchange, 403, "Forbidden: Admin access required.");
-                        return;
-                    }
-                    handleUpdateSuggestionStatus(exchange);
-                } else {
-                    sendError(exchange, 405, "Method Not Allowed");
-                }
+        if (path.equals("/my-suggestions")) {
+            if (method.equals("GET")) {
+                handleGetMySuggestions(exchange, userId);
             } else {
-                sendError(exchange, 404, "Not Found");
+                sendError(exchange, 405, "Method Not Allowed");
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendError(exchange, 500, "Internal server error");
+        } else if (path.equals("/user-suggestions")) {
+            if (method.equals("GET")) {
+                // Admin only
+                if (role == null || !role.equalsIgnoreCase("admin")) {
+                    sendError(exchange, 403, "Forbidden: Admin access required.");
+                    return;
+                }
+                handleGetAllSuggestions(exchange);
+            } else if (method.equals("POST")) {
+                handleCreateSuggestion(exchange, userId);
+            } else if (method.equals("PUT")) {
+                // Admin only
+                if (role == null || !role.equalsIgnoreCase("admin")) {
+                    sendError(exchange, 403, "Forbidden: Admin access required.");
+                    return;
+                }
+                handleUpdateSuggestionStatus(exchange);
+            } else {
+                sendError(exchange, 405, "Method Not Allowed");
+            }
+        } else {
+            sendError(exchange, 404, "Not Found");
         }
     }
+
 
     private void handleGetMySuggestions(HttpExchange exchange, int userId) throws Exception {
         Connection conn = DbConnection.getConnection();
@@ -251,30 +228,5 @@ public class UserSuggestionsHandler implements HttpHandler {
         conn.close();
         sendJSON(exchange, 200, Map.of("success", true, "message", "Suggestion status updated to " + status));
     }
-
-    private String readBody(HttpExchange exchange) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-        }
-        return sb.toString();
-    }
-
-    private void sendJSON(HttpExchange exchange, int status, Object data) throws IOException {
-        byte[] bytes = mapper.writeValueAsBytes(data);
-        exchange.sendResponseHeaders(status, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
-    }
-
-    private void sendError(HttpExchange exchange, int statusCode, String message) {
-        try {
-            Map<String, String> error = Map.of("error", message);
-            sendJSON(exchange, statusCode, error);
-        } catch (Exception ignored) {}
-    }
 }
+
