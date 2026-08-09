@@ -78,7 +78,20 @@ public class GeminiService {
     }
 
     /**
-     * Explains the solution code for a problem.
+     * Strategy Pattern Context Executor:
+     * Executes Gemini API content generation using an injected AiPromptStrategy.
+     */
+    public static String generateContentWithStrategy(
+        Services.strategies.AiPromptStrategy strategy,
+        Integer userId,
+        int resourceId
+    ) throws Exception {
+        ObjectNode requestBody = strategy.buildRequestBody(mapper);
+        return generateContent(requestBody, userId, strategy.getResourceType(), resourceId);
+    }
+
+    /**
+     * Explains the solution code for a problem using SolutionExplanationStrategy.
      */
     public static String generateSolutionExplanation(
         String problemTitle, 
@@ -86,29 +99,13 @@ public class GeminiService {
         Integer userId, 
         int resourceId
     ) throws Exception {
-        ObjectNode requestBody = mapper.createObjectNode();
-        ArrayNode contents = requestBody.putArray("contents");
-        
-        ObjectNode userTurn = contents.addObject();
-        userTurn.put("role", "user");
-        ArrayNode parts = userTurn.putArray("parts");
-        
-        String prompt = "You are an expert competitive programmer and computer science teacher. Explain the following competitive programming problem solution. Keep it clear, concise, and structured in clean Markdown.\n\n" +
-            "Problem Title: " + problemTitle + "\n" +
-            "Solution Code:\n" + code + "\n\n" +
-            "Provide a detailed explanation of:\n" +
-            "1. The approach used.\n" +
-            "2. Why it works.\n" +
-            "3. The time and space complexity.\n" +
-            "4. The key insights or techniques.\n";
-            
-        parts.addObject().put("text", prompt);
-
-        return generateContent(requestBody, userId, "solution", resourceId);
+        Services.strategies.AiPromptStrategy strategy = 
+            new Services.strategies.SolutionExplanationStrategy(problemTitle, code);
+        return generateContentWithStrategy(strategy, userId, resourceId);
     }
 
     /**
-     * Explains a CP topic or subtopic from general knowledge.
+     * Explains a CP topic or subtopic using TopicExplanationStrategy.
      */
     public static String generateTopicExplanation(
         String name, 
@@ -117,29 +114,13 @@ public class GeminiService {
         Integer userId, 
         int resourceId
     ) throws Exception {
-        ObjectNode requestBody = mapper.createObjectNode();
-        ArrayNode contents = requestBody.putArray("contents");
-        
-        ObjectNode userTurn = contents.addObject();
-        userTurn.put("role", "user");
-        ArrayNode parts = userTurn.putArray("parts");
-
-        String prompt = "You are an expert competitive programmer and computer science teacher. Explain the competitive programming topic: " + name + 
-            " (Context: " + (categoryOrParentName != null ? categoryOrParentName : "General Competitive Programming") + ").\n\n" +
-            "Provide:\n" +
-            "1. The basic concepts and definitions.\n" +
-            "2. How and why it is used in competitive programming.\n" +
-            "3. Standard examples or use cases.\n" +
-            "4. Complexity analysis of standard operations.\n\n" +
-            "Keep it structured in beautiful Markdown with code examples where appropriate.";
-
-        parts.addObject().put("text", prompt);
-
-        return generateContent(requestBody, userId, resourceType, resourceId);
+        Services.strategies.AiPromptStrategy strategy = 
+            new Services.strategies.TopicExplanationStrategy(name, categoryOrParentName, resourceType);
+        return generateContentWithStrategy(strategy, userId, resourceId);
     }
 
     /**
-     * Generate multi-turn followup Q&A response.
+     * Generate multi-turn followup Q&A response using FollowupPromptStrategy.
      */
     public static String generateFollowupResponse(
         String explanationContent, 
@@ -149,45 +130,11 @@ public class GeminiService {
         String resourceType, 
         int resourceId
     ) throws Exception {
-        ObjectNode requestBody = mapper.createObjectNode();
-        ArrayNode contents = requestBody.putArray("contents");
-
-        // We build the multi-turn contents.
-        // First message acts as user introducing the cached explanation context and the first user question or starts the chat.
-        // To be extremely clean and robust, we can prepend the explanation as system instruction context or inside the first user turn.
-        // Let's prepend it to the systemInstruction if possible, and fallback to user turn prepending if not.
-        // But systemInstruction is extremely clean:
-        ObjectNode systemInstruction = requestBody.putObject("systemInstruction");
-        ArrayNode systemParts = systemInstruction.putArray("parts");
-        systemParts.addObject().put("text", 
-            "You are an expert competitive programmer and AI assistant. The user is reading a cached explanation they have requested. " +
-            "Here is the cached explanation for context:\n\n" +
-            explanationContent + "\n\n" +
-            "Help the user by answering clarifying questions about this explanation, their code, or the concepts. " +
-            "Keep answers concise, direct, helpful, and formatted in Markdown."
-        );
-
-        // Populate contents from chat history
-        for (int i = 0; i < chatHistory.size(); i++) {
-            Map<String, String> msg = chatHistory.get(i);
-            String dbRole = msg.get("role");
-            String content = msg.get("content");
-
-            ObjectNode turn = contents.addObject();
-            // Gemini roles must be 'user' or 'model'
-            turn.put("role", dbRole.equalsIgnoreCase("model") || dbRole.equalsIgnoreCase("assistant") ? "model" : "user");
-            ArrayNode parts = turn.putArray("parts");
-            parts.addObject().put("text", content);
-        }
-
-        // Add current question
-        ObjectNode currentTurn = contents.addObject();
-        currentTurn.put("role", "user");
-        ArrayNode currentParts = currentTurn.putArray("parts");
-        currentParts.addObject().put("text", newQuestion);
-
-        return generateContent(requestBody, userId, resourceType, resourceId);
+        Services.strategies.AiPromptStrategy strategy = 
+            new Services.strategies.FollowupPromptStrategy(explanationContent, chatHistory, newQuestion, resourceType);
+        return generateContentWithStrategy(strategy, userId, resourceId);
     }
+
 
     /**
      * Write token usage to database log.
