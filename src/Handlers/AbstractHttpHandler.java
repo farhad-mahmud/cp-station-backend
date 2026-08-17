@@ -51,6 +51,7 @@ public abstract class AbstractHttpHandler implements HttpHandler {
      * @param exchange The HttpExchange object representing the request/response lifecycle.
      * @throws Exception Any unhandled exception will be caught by the template algorithm and responded with HTTP 500.
      */
+    
     protected abstract void processRequest(HttpExchange exchange) throws Exception;
 
     /**

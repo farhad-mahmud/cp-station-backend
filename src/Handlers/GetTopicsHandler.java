@@ -23,4 +23,6 @@ public class GetTopicsHandler extends AbstractHttpHandler {
 
         sendJSON(exchange, 200, json.toString());
     }
+
+    
 }

@@ -2,9 +2,13 @@
 .env
 .env.local
 
-# Compiled class files
+# Compiled class files and build outputs
 *.class
 src/**/*.class
+out/
+bin/
+*.jar
+
 
 # OS generated files
 .DS_Store

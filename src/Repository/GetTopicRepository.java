@@ -10,33 +10,27 @@ import java.util.List;
 
 public class GetTopicRepository {
 
-    public List<String> getAllTopics() throws Exception {
+        public List<String> getAllTopics() throws Exception {
 
-        Connection conn =
-                DbConnection.getConnection();
+                Connection conn = DbConnection.getConnection();
 
-        String sql =
-                "SELECT name FROM topics";
+                String sql = "SELECT name FROM topics";
 
-        // sequerly send sql qeury (protects from sql injection);
-        
-        PreparedStatement stmt =
-                conn.prepareStatement(sql);
+                // sequerly send sql qeury (protects from sql injection);
 
-        ResultSet rs =
-                stmt.executeQuery();
+                PreparedStatement stmt = conn.prepareStatement(sql);
 
-        List<String> topics =
-                new ArrayList<>();
+                ResultSet rs = stmt.executeQuery();
 
-        while(rs.next()) {
-            topics.add(
-                    rs.getString("name")
-            );
+                List<String> topics = new ArrayList<>();
+
+                while (rs.next()) {
+                        topics.add(
+                                        rs.getString("name"));
+                }
+
+                conn.close();
+
+                return topics;
         }
-
-        conn.close();
-
-        return topics;
-    }
 }

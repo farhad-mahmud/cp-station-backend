@@ -22,6 +22,7 @@ public class SolutionExplanationStrategy implements AiPromptStrategy {
     }
 
     @Override
+    // builds the specific JSON prompt for explaining problem code .. 
     public ObjectNode buildRequestBody(ObjectMapper mapper) {
         ObjectNode requestBody = mapper.createObjectNode();
         ArrayNode contents = requestBody.putArray("contents");

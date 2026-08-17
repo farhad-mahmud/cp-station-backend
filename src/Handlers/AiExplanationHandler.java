@@ -16,6 +16,8 @@ import java.util.Map;
 
 public class AiExplanationHandler extends AbstractHttpHandler {
 
+    private final Services.AiExplanationFacade facade = new Services.AiExplanationFacade();
+
     @Override
     protected void processRequest(HttpExchange exchange) throws Exception {
         String method = exchange.getRequestMethod().toUpperCase();
@@ -61,20 +63,11 @@ public class AiExplanationHandler extends AbstractHttpHandler {
             return;
         }
 
-        try (Connection conn = DbConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                 "SELECT content FROM ai_explanations WHERE resource_type = ? AND resource_id = ?"
-             )) {
-            stmt.setString(1, type);
-            stmt.setInt(2, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    String content = rs.getString("content");
-                    sendJSON(exchange, 200, Map.of("cached", true, "content", content));
-                } else {
-                    sendJSON(exchange, 200, Map.of("cached", false, "can_generate", true));
-                }
-            }
+        String content = facade.getCachedExplanation(type, id);
+        if (content != null) {
+            sendJSON(exchange, 200, Map.of("cached", true, "content", content));
+        } else {
+            sendJSON(exchange, 200, Map.of("cached", false, "can_generate", true));
         }
     }
 
@@ -102,20 +95,8 @@ public class AiExplanationHandler extends AbstractHttpHandler {
         Integer userId = SessionUtil.getUserIdFromToken(token);
         String role = SessionUtil.getRoleFromToken(token);
 
-        // Check cache
-        String existingContent = null;
-        try (Connection conn = DbConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                 "SELECT content FROM ai_explanations WHERE resource_type = ? AND resource_id = ?"
-             )) {
-            stmt.setString(1, type);
-            stmt.setInt(2, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    existingContent = rs.getString("content");
-                }
-            }
-        }
+        // Check cache via Facade
+        String existingContent = facade.getCachedExplanation(type, id);
 
         // If explanation is cached and they do not request regeneration, return cached
         if (existingContent != null && !regenerate) {
@@ -141,97 +122,15 @@ public class AiExplanationHandler extends AbstractHttpHandler {
             }
         }
 
-        // Generate explanation via Gemini
-        String explanation;
-        try (Connection conn = DbConnection.getConnection()) {
-            if (type.equals("solution")) {
-                String title = "";
-                String code = "";
-                try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT title, solution_code FROM resources WHERE id = ?"
-                )) {
-                    stmt.setInt(1, id);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            title = rs.getString("title");
-                            code = rs.getString("solution_code");
-                        } else {
-                            sendError(exchange, 404, "Resource not found");
-                            return;
-                        }
-                    }
-                }
-
-                if (code == null || code.trim().isEmpty()) {
-                    sendError(exchange, 400, "No solution code is submitted for this problem yet.");
-                    return;
-                }
-
-                explanation = GeminiService.generateSolutionExplanation(title, code, userId, id);
-
-            } else if (type.equals("topic")) {
-                String topicName = "";
-                String categoryName = "";
-                try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT t.name as topic_name, c.category_name as category_name " +
-                    "FROM topics t " +
-                    "LEFT JOIN categories c ON t.category_id = c.id " +
-                    "WHERE t.id = ?"
-                )) {
-                    stmt.setInt(1, id);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            topicName = rs.getString("topic_name");
-                            categoryName = rs.getString("category_name");
-                        } else {
-                            sendError(exchange, 404, "Topic not found");
-                            return;
-                        }
-                    }
-                }
-
-                explanation = GeminiService.generateTopicExplanation(topicName, categoryName, "topic", userId, id);
-
-            } else { // subtopic
-                String subtopicName = "";
-                String topicName = "";
-                try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT s.name as subtopic_name, t.name as topic_name " +
-                    "FROM subtopics s " +
-                    "LEFT JOIN topics t ON s.topic_id = t.id " +
-                    "WHERE s.id = ?"
-                )) {
-                    stmt.setInt(1, id);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            subtopicName = rs.getString("subtopic_name");
-                            topicName = rs.getString("topic_name");
-                        } else {
-                            sendError(exchange, 404, "Subtopic not found");
-                            return;
-                        }
-                    }
-                }
-
-                explanation = GeminiService.generateTopicExplanation(subtopicName, topicName, "subtopic", userId, id);
-            }
+        // Generate explanation via Facade
+        try {
+            String explanation = facade.generateAndCacheExplanation(type, id, userId);
+            sendJSON(exchange, 200, Map.of("cached", true, "content", explanation));
+        } catch (Services.AiExplanationFacade.ResourceNotFoundException e) {
+            sendError(exchange, 404, e.getMessage());
+        } catch (Services.AiExplanationFacade.InvalidResourceDataException e) {
+            sendError(exchange, 400, e.getMessage());
         }
-
-        // Cache explanation
-        try (Connection conn = DbConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                 "INSERT INTO ai_explanations (resource_type, resource_id, content, updated_at) " +
-                 "VALUES (?, ?, ?, now()) " +
-                 "ON CONFLICT (resource_type, resource_id) " +
-                 "DO UPDATE SET content = EXCLUDED.content, updated_at = now()"
-             )) {
-            stmt.setString(1, type);
-            stmt.setInt(2, id);
-            stmt.setString(3, explanation);
-            stmt.executeUpdate();
-        }
-
-        sendJSON(exchange, 200, Map.of("cached", true, "content", explanation));
     }
 
     private Map<String, String> parseQuery(String query) {

@@ -26,11 +26,10 @@ public class GeminiService {
      * Logs the usage details to database.
      */
     public static String generateContent(
-        ObjectNode requestBody, 
-        Integer userId, 
-        String resourceType, 
-        int resourceId
-    ) throws Exception {
+            ObjectNode requestBody,
+            Integer userId,
+            String resourceType,
+            int resourceId) throws Exception {
         String apiKey = Env.get("GEMINI_API_KEY");
         if (apiKey == null || apiKey.trim().isEmpty()) {
             throw new IllegalStateException("GEMINI_API_KEY environment variable is not set.");
@@ -41,30 +40,32 @@ public class GeminiService {
             model = "gemini-2.5-flash"; // Fallback default
         }
 
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key="
+                + apiKey;
         String requestJson = mapper.writeValueAsString(requestBody);
 
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(requestJson, StandardCharsets.UTF_8))
-            .build();
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestJson, StandardCharsets.UTF_8))
+                .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Gemini API returned error code " + response.statusCode() + ": " + response.body());
+            throw new RuntimeException(
+                    "Gemini API returned error code " + response.statusCode() + ": " + response.body());
         }
 
         JsonNode rootNode = mapper.readTree(response.body());
-        
+
         // Extract text response
         JsonNode candidate = rootNode.path("candidates").path(0);
         JsonNode parts = candidate.path("content").path("parts");
         if (parts.isMissingNode() || parts.isEmpty()) {
             throw new RuntimeException("No text generated in response. Full body: " + response.body());
         }
-        
+
         String responseText = parts.get(0).path("text").asText("");
 
         // Extract and log usage tokens
@@ -82,74 +83,70 @@ public class GeminiService {
      * Executes Gemini API content generation using an injected AiPromptStrategy.
      */
     public static String generateContentWithStrategy(
-        Services.strategies.AiPromptStrategy strategy,
-        Integer userId,
-        int resourceId
-    ) throws Exception {
+            Services.strategies.AiPromptStrategy strategy,
+            Integer userId,
+            int resourceId) throws Exception {
         ObjectNode requestBody = strategy.buildRequestBody(mapper);
         return generateContent(requestBody, userId, strategy.getResourceType(), resourceId);
     }
 
     /**
-     * Explains the solution code for a problem using SolutionExplanationStrategy.
+     * Explains the solution code for a problem using SolutionExplanationStrategy
+     * created via PromptStrategyFactory.
      */
     public static String generateSolutionExplanation(
-        String problemTitle, 
-        String code, 
-        Integer userId, 
-        int resourceId
-    ) throws Exception {
-        Services.strategies.AiPromptStrategy strategy = 
-            new Services.strategies.SolutionExplanationStrategy(problemTitle, code);
+            String problemTitle,
+            String code,
+            Integer userId,
+            int resourceId) throws Exception {
+        Services.strategies.AiPromptStrategy strategy = Services.strategies.PromptStrategyFactory
+                .createSolutionStrategy(problemTitle, code);
         return generateContentWithStrategy(strategy, userId, resourceId);
     }
 
     /**
-     * Explains a CP topic or subtopic using TopicExplanationStrategy.
+     * Explains a CP topic or subtopic using TopicExplanationStrategy created via
+     * PromptStrategyFactory.
      */
     public static String generateTopicExplanation(
-        String name, 
-        String categoryOrParentName, 
-        String resourceType, 
-        Integer userId, 
-        int resourceId
-    ) throws Exception {
-        Services.strategies.AiPromptStrategy strategy = 
-            new Services.strategies.TopicExplanationStrategy(name, categoryOrParentName, resourceType);
+            String name,
+            String categoryOrParentName,
+            String resourceType,
+            Integer userId,
+            int resourceId) throws Exception {
+        Services.strategies.AiPromptStrategy strategy = Services.strategies.PromptStrategyFactory
+                .createTopicStrategy(name, categoryOrParentName, resourceType);
         return generateContentWithStrategy(strategy, userId, resourceId);
     }
 
     /**
-     * Generate multi-turn followup Q&A response using FollowupPromptStrategy.
+     * Generate multi-turn followup Q&A response using FollowupPromptStrategy
+     * created via PromptStrategyFactory.
      */
     public static String generateFollowupResponse(
-        String explanationContent, 
-        List<Map<String, String>> chatHistory, 
-        String newQuestion, 
-        Integer userId, 
-        String resourceType, 
-        int resourceId
-    ) throws Exception {
-        Services.strategies.AiPromptStrategy strategy = 
-            new Services.strategies.FollowupPromptStrategy(explanationContent, chatHistory, newQuestion, resourceType);
+            String explanationContent,
+            List<Map<String, String>> chatHistory,
+            String newQuestion,
+            Integer userId,
+            String resourceType,
+            int resourceId) throws Exception {
+        Services.strategies.AiPromptStrategy strategy = Services.strategies.PromptStrategyFactory
+                .createFollowupStrategy(explanationContent, chatHistory, newQuestion, resourceType);
         return generateContentWithStrategy(strategy, userId, resourceId);
     }
-
 
     /**
      * Write token usage to database log.
      */
     private static void logUsage(
-        Integer userId, 
-        String resourceType, 
-        int resourceId, 
-        int totalTokens, 
-        int thoughtsTokens
-    ) {
+            Integer userId,
+            String resourceType,
+            int resourceId,
+            int totalTokens,
+            int thoughtsTokens) {
         try (Connection conn = DbConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                 "INSERT INTO ai_usage_log (user_id, resource_type, resource_id, total_tokens, thoughts_tokens) VALUES (?, ?, ?, ?, ?)"
-             )) {
+                PreparedStatement stmt = conn.prepareStatement(
+                        "INSERT INTO ai_usage_log (user_id, resource_type, resource_id, total_tokens, thoughts_tokens) VALUES (?, ?, ?, ?, ?)")) {
             if (userId == null) {
                 stmt.setNull(1, java.sql.Types.INTEGER);
             } else {
