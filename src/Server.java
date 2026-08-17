@@ -11,6 +11,11 @@ import Handlers.AiFollowupHandler;
 import Handlers.AdminAiSettingsHandler;
 import Handlers.decorators.AuthDecorator;
 import Handlers.decorators.LoggingDecorator;
+import Handlers.mock.AdminMockInterviewHandler;
+import Handlers.mock.BookingsHandler;
+import Handlers.mock.MentorPortalHandler;
+import Handlers.mock.MentorsHandler;
+import Handlers.mock.PaymentsHandler;
 import auth.LoginHandler;
 import auth.LogoutHandler;
 import auth.MeHandler;
@@ -23,7 +28,7 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
 
-        int port = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 8080;
+        int port = Integer.parseInt(config.Env.get("PORT", "8082"));
 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
@@ -72,7 +77,42 @@ public class Server {
         server.createContext("/admin/ai/settings", new LoggingDecorator(new AuthDecorator(adminAiHandler)));
         server.createContext("/admin/ai/usage", new LoggingDecorator(new AuthDecorator(adminAiHandler)));
 
-       
+        // ── Mock Interview ────────────────────────────────────────────────
+        // Public catalogue: a logged out visitor can browse experts and only
+        // meets the login gate at booking time.
+        MentorsHandler mentorsHandler = new MentorsHandler();
+        server.createContext("/mentors", new LoggingDecorator(mentorsHandler));
+        server.createContext("/mentor-detail", new LoggingDecorator(mentorsHandler));
+        server.createContext("/mentor-slots", new LoggingDecorator(mentorsHandler));
+        server.createContext("/mentor-stacks", new LoggingDecorator(mentorsHandler));
+
+        // Student booking lifecycle
+        BookingsHandler bookingsHandler = new BookingsHandler();
+        server.createContext("/bookings", new LoggingDecorator(new AuthDecorator(bookingsHandler)));
+        server.createContext("/bookings/cancel", new LoggingDecorator(new AuthDecorator(bookingsHandler)));
+        server.createContext("/my-bookings", new LoggingDecorator(new AuthDecorator(bookingsHandler)));
+        server.createContext("/feedback", new LoggingDecorator(new AuthDecorator(bookingsHandler)));
+
+        // Manual bKash payment submission
+        PaymentsHandler paymentsHandler = new PaymentsHandler();
+        server.createContext("/payments/instructions", new LoggingDecorator(new AuthDecorator(paymentsHandler)));
+        server.createContext("/payments/submit", new LoggingDecorator(new AuthDecorator(paymentsHandler)));
+
+        // Mentor workspace
+        MentorPortalHandler mentorPortalHandler = new MentorPortalHandler();
+        server.createContext("/mentor/me", new LoggingDecorator(new AuthDecorator(mentorPortalHandler)));
+        server.createContext("/mentor/apply", new LoggingDecorator(new AuthDecorator(mentorPortalHandler)));
+        server.createContext("/mentor/slots", new LoggingDecorator(new AuthDecorator(mentorPortalHandler)));
+        server.createContext("/mentor/bookings", new LoggingDecorator(new AuthDecorator(mentorPortalHandler)));
+        server.createContext("/mentor/complete", new LoggingDecorator(new AuthDecorator(mentorPortalHandler)));
+
+        // Admin review: verifying a payment here is what confirms a booking
+        AdminMockInterviewHandler adminMockHandler = new AdminMockInterviewHandler();
+        server.createContext("/admin/mentors", new LoggingDecorator(new AuthDecorator(adminMockHandler)));
+        server.createContext("/admin/bookings", new LoggingDecorator(new AuthDecorator(adminMockHandler)));
+        server.createContext("/admin/payments", new LoggingDecorator(new AuthDecorator(adminMockHandler)));
+
+
 
         //thread executor..
         server.setExecutor(null);
