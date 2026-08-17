@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS mentor_stacks (
 CREATE INDEX IF NOT EXISTS idx_mentor_stacks_stack ON mentor_stacks (stack);
 
 -- ---------------------------------------------------------------------------
--- Availability. The mentor publishes one-hour windows; booking claims one.
+-- Availability. The mentor publishes fixed-length windows (see SLOT_MINUTES in
+-- MentorPortalHandler); booking claims one.
 -- meeting_link is the mentor's own Google Meet / Zoom URL.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS mentor_slots (

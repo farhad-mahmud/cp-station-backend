@@ -25,7 +25,7 @@ import java.util.Map;
  *   GET    /mentor/me         mentor profile for the logged-in user (or not_mentor)
  *   POST   /mentor/apply      apply, or update an existing profile
  *   GET    /mentor/slots      own availability, including booked slots
- *   POST   /mentor/slots      publish a one-hour slot
+ *   POST   /mentor/slots      publish an interview slot (SLOT_MINUTES long)
  *   DELETE /mentor/slots      withdraw an unbooked slot
  *   GET    /mentor/bookings   interviews to run, with student notes
  *   PUT    /mentor/bookings   set or change the meeting link for a booking
@@ -34,7 +34,12 @@ import java.util.Map;
 public class MentorPortalHandler extends AbstractHttpHandler {
 
     private static final String UNIQUE_VIOLATION = "23505";
-    private static final long SLOT_MINUTES = 60;
+    /**
+     * Length of one mock interview. The single source of truth for duration:
+     * end_at is always derived from it, so changing this number changes every
+     * newly published slot without touching the ones already on sale.
+     */
+    private static final long SLOT_MINUTES = 30;
 
     @Override
     protected void processRequest(HttpExchange exchange) throws Exception {

@@ -16,14 +16,16 @@ public interface PaymentGateway {
     String name();
 
     /**
-     * Starts a payment for a booking.
+     * Starts a payment for any purchase — a mock interview booking or a course
+     * enrollment. The caller supplies the reference so this stays agnostic about
+     * what is being bought.
      *
-     * @param bookingId      the booking being paid for
+     * @param reference      what the student puts in the provider's reference field
      * @param amountBdt      amount in whole BDT
      * @param idempotencyKey stable key so a retried initiate never double-charges
      * @return instructions for the student (manual flow) or a redirect URL (hosted flow)
      */
-    PaymentIntent initiate(int bookingId, int amountBdt, String idempotencyKey);
+    PaymentIntent initiate(String reference, int amountBdt, String idempotencyKey);
 
     /**
      * Validates the reference a student submitted (or a gateway callback payload).

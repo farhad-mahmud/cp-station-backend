@@ -133,6 +133,50 @@ public final class MockInterviewSupport {
         }
     }
 
+    /**
+     * Same lazy sweep for course enrollments. Releases the seat before marking
+     * the enrollment expired, because once the status changes the row can no
+     * longer be identified as one that was holding a seat.
+     */
+    public static void releaseExpiredEnrollments(Connection conn) throws Exception {
+        try (PreparedStatement seats = conn.prepareStatement(
+                "UPDATE courses c SET enrolled_count = GREATEST(c.enrolled_count - sub.n, 0)" +
+                "  FROM (SELECT course_id, COUNT(*) AS n FROM enrollments" +
+                "         WHERE status = 'pending_payment'" +
+                "           AND hold_expires_at IS NOT NULL AND hold_expires_at < NOW()" +
+                "         GROUP BY course_id) sub" +
+                " WHERE c.id = sub.course_id")) {
+            seats.executeUpdate();
+        }
+        try (PreparedStatement rows = conn.prepareStatement(
+                "UPDATE enrollments SET status = 'expired'" +
+                " WHERE status = 'pending_payment'" +
+                "   AND hold_expires_at IS NOT NULL AND hold_expires_at < NOW()")) {
+            rows.executeUpdate();
+        }
+        try (PreparedStatement pays = conn.prepareStatement(
+                "UPDATE payments SET status = 'failed', updated_at = NOW()" +
+                " WHERE status = 'initiated' AND enrollment_id IN" +
+                "       (SELECT id FROM enrollments WHERE status = 'expired')")) {
+            pays.executeUpdate();
+        }
+    }
+
+    // ── Payment references ─────────────────────────────────────────────────
+
+    /**
+     * Reference the student types into the bKash reference field. Prefixed per
+     * product so a mock interview and a course enrollment can never be confused
+     * for each other while reading a bKash statement.
+     */
+    public static String bookingReference(int bookingId) {
+        return "CPS-B" + bookingId;
+    }
+
+    public static String enrollmentReference(int enrollmentId) {
+        return "CPS-C" + enrollmentId;
+    }
+
     // ── Lookups ────────────────────────────────────────────────────────────
 
     /** Mentor id for a user, or null when that user is not a mentor. */

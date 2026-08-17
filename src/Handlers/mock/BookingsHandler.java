@@ -178,7 +178,8 @@ public class BookingsHandler extends AbstractHttpHandler {
             conn.commit();
             committed = true;
 
-            PaymentIntent intent = gateway.initiate(bookingId, rate, idempotencyKey);
+            PaymentIntent intent = gateway.initiate(
+                    MockInterviewSupport.bookingReference(bookingId), rate, idempotencyKey);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

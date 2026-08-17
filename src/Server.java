@@ -13,6 +13,9 @@ import Handlers.decorators.AuthDecorator;
 import Handlers.decorators.LoggingDecorator;
 import Handlers.mock.AdminMockInterviewHandler;
 import Handlers.mock.BookingsHandler;
+import Handlers.mock.CoursesHandler;
+import Handlers.mock.EnrollmentsHandler;
+import Handlers.mock.MentorCoursesHandler;
 import Handlers.mock.MentorPortalHandler;
 import Handlers.mock.MentorsHandler;
 import Handlers.mock.PaymentsHandler;
@@ -111,6 +114,26 @@ public class Server {
         server.createContext("/admin/mentors", new LoggingDecorator(new AuthDecorator(adminMockHandler)));
         server.createContext("/admin/bookings", new LoggingDecorator(new AuthDecorator(adminMockHandler)));
         server.createContext("/admin/payments", new LoggingDecorator(new AuthDecorator(adminMockHandler)));
+        server.createContext("/admin/courses", new LoggingDecorator(new AuthDecorator(adminMockHandler)));
+
+        // ── Virtual Classroom ─────────────────────────────────────────────
+        // Public course catalogue; the login gate is at enrolment, not browsing.
+        CoursesHandler coursesHandler = new CoursesHandler();
+        server.createContext("/courses", new LoggingDecorator(coursesHandler));
+        server.createContext("/course-detail", new LoggingDecorator(coursesHandler));
+        server.createContext("/course-stacks", new LoggingDecorator(coursesHandler));
+
+        // Student enrolment lifecycle
+        EnrollmentsHandler enrollmentsHandler = new EnrollmentsHandler();
+        server.createContext("/enrollments", new LoggingDecorator(new AuthDecorator(enrollmentsHandler)));
+        server.createContext("/enrollments/cancel", new LoggingDecorator(new AuthDecorator(enrollmentsHandler)));
+        server.createContext("/my-enrollments", new LoggingDecorator(new AuthDecorator(enrollmentsHandler)));
+
+        // Instructor course workspace — same mentors row as the mock interviews
+        MentorCoursesHandler mentorCoursesHandler = new MentorCoursesHandler();
+        server.createContext("/mentor/courses", new LoggingDecorator(new AuthDecorator(mentorCoursesHandler)));
+        server.createContext("/mentor/courses/syllabus", new LoggingDecorator(new AuthDecorator(mentorCoursesHandler)));
+        server.createContext("/mentor/course-students", new LoggingDecorator(new AuthDecorator(mentorCoursesHandler)));
 
 
 

@@ -58,6 +58,11 @@ public class AdminMockInterviewHandler extends AbstractHttpHandler {
                 else if (method.equals("PUT")) handleReviewPayment(exchange, userId);
                 else sendError(exchange, 405, "Method Not Allowed");
                 break;
+            case "/admin/courses":
+                if (method.equals("GET")) handleListCourses(exchange);
+                else if (method.equals("PUT")) handleUpdateCourseStatus(exchange);
+                else sendError(exchange, 405, "Method Not Allowed");
+                break;
             default:
                 sendError(exchange, 404, "Not Found");
         }
@@ -244,44 +249,201 @@ public class AdminMockInterviewHandler extends AbstractHttpHandler {
 
     // ── GET /admin/payments ────────────────────────────────────────────────
 
+    /**
+     * One queue for both products. A payment row points at either a booking or
+     * an enrollment, so both are LEFT JOINed and the response carries a `kind`
+     * telling the console which it is looking at.
+     */
     private void handleListPayments(HttpExchange exchange) throws Exception {
         String status = MockInterviewSupport.queryParams(exchange).getOrDefault("status", "submitted");
 
         Connection conn = DbConnection.getConnection();
         try (PreparedStatement stmt = conn.prepareStatement(
-                "SELECT p.id, p.booking_id, p.provider, p.amount_bdt, p.status, p.provider_txn_id, " +
-                "       p.payer_msisdn, p.created_at, " +
-                "       b.status AS booking_status, b.stack, s.start_at, " +
-                "       m.display_name AS mentor_name, u.email AS student_email, u.name AS student_name " +
+                "SELECT p.id, p.booking_id, p.enrollment_id, p.provider, p.amount_bdt, p.status, " +
+                "       p.provider_txn_id, p.payer_msisdn, p.created_at, " +
+                "       b.status AS booking_status, b.stack AS booking_stack, s.start_at, " +
+                "       bm.display_name AS booking_mentor, " +
+                "       bu.email AS booking_student_email, bu.name AS booking_student_name, " +
+                "       e.status AS enrollment_status, c.title AS course_title, c.stack AS course_stack, " +
+                "       c.start_date, cm.display_name AS course_mentor, " +
+                "       eu.email AS course_student_email, eu.name AS course_student_name " +
                 "  FROM payments p " +
-                "  JOIN bookings b ON b.id = p.booking_id " +
-                "  JOIN mentor_slots s ON s.id = b.slot_id " +
-                "  JOIN mentors m ON m.id = b.mentor_id " +
-                "  LEFT JOIN users u ON u.id = b.student_id " +
+                "  LEFT JOIN bookings b ON b.id = p.booking_id " +
+                "  LEFT JOIN mentor_slots s ON s.id = b.slot_id " +
+                "  LEFT JOIN mentors bm ON bm.id = b.mentor_id " +
+                "  LEFT JOIN users bu ON bu.id = b.student_id " +
+                "  LEFT JOIN enrollments e ON e.id = p.enrollment_id " +
+                "  LEFT JOIN courses c ON c.id = e.course_id " +
+                "  LEFT JOIN mentors cm ON cm.id = c.mentor_id " +
+                "  LEFT JOIN users eu ON eu.id = e.student_id " +
                 " WHERE p.status = ? ORDER BY p.created_at ASC")) {
             stmt.setString(1, status);
             ResultSet rs = stmt.executeQuery();
 
             List<Map<String, Object>> payments = new ArrayList<>();
             while (rs.next()) {
+                boolean isBooking = rs.getObject("booking_id") != null;
+
                 Map<String, Object> p = new HashMap<>();
                 p.put("id", rs.getInt("id"));
-                p.put("booking_id", rs.getInt("booking_id"));
+                p.put("kind", isBooking ? "booking" : "enrollment");
                 p.put("provider", rs.getString("provider"));
                 p.put("amount_bdt", rs.getInt("amount_bdt"));
                 p.put("status", rs.getString("status"));
                 p.put("trx_id", rs.getString("provider_txn_id"));
                 p.put("payer_msisdn", rs.getString("payer_msisdn"));
                 p.put("created_at", MockInterviewSupport.iso(rs.getTimestamp("created_at")));
-                p.put("booking_status", rs.getString("booking_status"));
-                p.put("stack", rs.getString("stack"));
-                p.put("start_at", MockInterviewSupport.iso(rs.getTimestamp("start_at")));
-                p.put("mentor_name", rs.getString("mentor_name"));
-                p.put("student_name", rs.getString("student_name"));
-                p.put("student_email", rs.getString("student_email"));
+
+                if (isBooking) {
+                    p.put("booking_id", rs.getInt("booking_id"));
+                    p.put("purchase_status", rs.getString("booking_status"));
+                    p.put("item", "Mock interview · " + rs.getString("booking_stack"));
+                    p.put("stack", rs.getString("booking_stack"));
+                    p.put("when", MockInterviewSupport.iso(rs.getTimestamp("start_at")));
+                    p.put("mentor_name", rs.getString("booking_mentor"));
+                    p.put("student_name", rs.getString("booking_student_name"));
+                    p.put("student_email", rs.getString("booking_student_email"));
+                } else {
+                    p.put("enrollment_id", rs.getInt("enrollment_id"));
+                    p.put("purchase_status", rs.getString("enrollment_status"));
+                    p.put("item", "Course · " + rs.getString("course_title"));
+                    p.put("stack", rs.getString("course_stack"));
+                    java.sql.Date startDate = rs.getDate("start_date");
+                    p.put("when", startDate == null ? null : startDate.toString());
+                    p.put("mentor_name", rs.getString("course_mentor"));
+                    p.put("student_name", rs.getString("course_student_name"));
+                    p.put("student_email", rs.getString("course_student_email"));
+                }
                 payments.add(p);
             }
             sendJSON(exchange, 200, payments);
+        } finally {
+            conn.close();
+        }
+    }
+
+    // ── GET /admin/courses ─────────────────────────────────────────────────
+
+    private void handleListCourses(HttpExchange exchange) throws Exception {
+        String status = MockInterviewSupport.queryParams(exchange).get("status");
+
+        String sql =
+            "SELECT c.id, c.title, c.summary, c.stack, c.level, c.price_bdt, c.duration_weeks, " +
+            "       c.total_hours, c.seat_limit, c.enrolled_count, c.start_date, c.schedule_note, " +
+            "       c.meeting_link, c.status, c.created_at, " +
+            "       m.id AS mentor_id, m.display_name AS mentor_name, m.status AS mentor_status, " +
+            "       u.email AS mentor_email, " +
+            "       (SELECT COUNT(*) FROM course_syllabus s WHERE s.course_id = c.id) AS syllabus_count, " +
+            "       (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id " +
+            "          AND e.status IN ('active','completed')) AS paid_students, " +
+            "       (SELECT COALESCE(SUM(e.platform_fee_bdt), 0) FROM enrollments e " +
+            "         WHERE e.course_id = c.id AND e.status IN ('active','completed')) AS platform_revenue " +
+            "  FROM courses c " +
+            "  JOIN mentors m ON m.id = c.mentor_id " +
+            "  LEFT JOIN users u ON u.id = m.user_id " +
+            (status != null && !status.trim().isEmpty() ? " WHERE c.status = ? " : "") +
+            " ORDER BY CASE c.status WHEN 'pending' THEN 0 ELSE 1 END, c.created_at DESC";
+
+        Connection conn = DbConnection.getConnection();
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            if (status != null && !status.trim().isEmpty()) {
+                stmt.setString(1, status.trim());
+            }
+            ResultSet rs = stmt.executeQuery();
+
+            List<Map<String, Object>> courses = new ArrayList<>();
+            while (rs.next()) {
+                Map<String, Object> c = new HashMap<>();
+                c.put("id", rs.getInt("id"));
+                c.put("title", rs.getString("title"));
+                c.put("summary", rs.getString("summary"));
+                c.put("stack", rs.getString("stack"));
+                c.put("level", rs.getString("level"));
+                c.put("price_bdt", rs.getInt("price_bdt"));
+                c.put("duration_weeks", rs.getInt("duration_weeks"));
+                int totalHours = rs.getInt("total_hours");
+                c.put("total_hours", rs.wasNull() ? null : totalHours);
+                c.put("seat_limit", rs.getInt("seat_limit"));
+                c.put("enrolled_count", rs.getInt("enrolled_count"));
+                java.sql.Date startDate = rs.getDate("start_date");
+                c.put("start_date", startDate == null ? null : startDate.toString());
+                c.put("schedule_note", rs.getString("schedule_note"));
+                c.put("has_meeting_link", rs.getString("meeting_link") != null);
+                c.put("status", rs.getString("status"));
+                c.put("created_at", MockInterviewSupport.iso(rs.getTimestamp("created_at")));
+                c.put("mentor_id", rs.getInt("mentor_id"));
+                c.put("mentor_name", rs.getString("mentor_name"));
+                c.put("mentor_status", rs.getString("mentor_status"));
+                c.put("mentor_email", rs.getString("mentor_email"));
+                c.put("syllabus_count", rs.getInt("syllabus_count"));
+                c.put("paid_students", rs.getInt("paid_students"));
+                c.put("platform_revenue_bdt", rs.getInt("platform_revenue"));
+                courses.add(c);
+            }
+            sendJSON(exchange, 200, courses);
+        } finally {
+            conn.close();
+        }
+    }
+
+    // ── PUT /admin/courses ─────────────────────────────────────────────────
+
+    private void handleUpdateCourseStatus(HttpExchange exchange) throws Exception {
+        JsonNode json = mapper.readTree(readBody(exchange));
+
+        if (!json.has("course_id") || !json.has("status")) {
+            sendError(exchange, 400, "Missing required fields: course_id and status");
+            return;
+        }
+        int courseId = json.get("course_id").asInt();
+        String status = json.get("status").asText("").trim().toLowerCase();
+
+        if (!status.equals("published") && !status.equals("draft")
+                && !status.equals("archived") && !status.equals("pending")) {
+            sendError(exchange, 400, "status must be one of: draft, pending, published, archived");
+            return;
+        }
+
+        Connection conn = DbConnection.getConnection();
+        try {
+            // Publishing a course with no syllabus would put an empty product on
+            // sale, so refuse it here rather than trusting the console.
+            if (status.equals("published")) {
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "SELECT (SELECT COUNT(*) FROM course_syllabus s WHERE s.course_id = c.id) AS n, " +
+                        "       m.status AS mentor_status " +
+                        "  FROM courses c JOIN mentors m ON m.id = c.mentor_id WHERE c.id = ?")) {
+                    stmt.setInt(1, courseId);
+                    ResultSet rs = stmt.executeQuery();
+                    if (!rs.next()) {
+                        sendError(exchange, 404, "Course not found");
+                        return;
+                    }
+                    if (rs.getInt("n") == 0) {
+                        sendError(exchange, 400, "This course has no syllabus items — it cannot be published.");
+                        return;
+                    }
+                    if (!"approved".equalsIgnoreCase(rs.getString("mentor_status"))) {
+                        sendError(exchange, 409, "Approve the instructor's mentor profile before publishing their course.");
+                        return;
+                    }
+                }
+            }
+
+            int updated;
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "UPDATE courses SET status = ?, updated_at = NOW() WHERE id = ?")) {
+                stmt.setString(1, status);
+                stmt.setInt(2, courseId);
+                updated = stmt.executeUpdate();
+            }
+            if (updated == 0) {
+                sendError(exchange, 404, "Course not found");
+                return;
+            }
+
+            sendJSON(exchange, 200, Map.of("success", true,
+                    "message", "Course status set to " + status + "."));
         } finally {
             conn.close();
         }
@@ -315,18 +477,24 @@ public class AdminMockInterviewHandler extends AbstractHttpHandler {
         try {
             conn.setAutoCommit(false);
 
-            int bookingId;
-            int slotId;
+            boolean isBooking;
+            int bookingId = 0;
+            int slotId = 0;
+            int enrollmentId = 0;
+            int courseId = 0;
             String paymentStatus;
-            String bookingStatus;
-            String slotLink;
+            String purchaseStatus;
+            String meetingLink;
             try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT p.status AS payment_status, p.booking_id, b.status AS booking_status, " +
-                    "       b.slot_id, s.meeting_link " +
+                    "SELECT p.status AS payment_status, p.booking_id, p.enrollment_id, " +
+                    "       b.status AS booking_status, b.slot_id, s.meeting_link AS slot_link, " +
+                    "       e.status AS enrollment_status, e.course_id, c.meeting_link AS course_link " +
                     "  FROM payments p " +
-                    "  JOIN bookings b ON b.id = p.booking_id " +
-                    "  JOIN mentor_slots s ON s.id = b.slot_id " +
-                    " WHERE p.id = ? FOR UPDATE OF p, b")) {
+                    "  LEFT JOIN bookings b ON b.id = p.booking_id " +
+                    "  LEFT JOIN mentor_slots s ON s.id = b.slot_id " +
+                    "  LEFT JOIN enrollments e ON e.id = p.enrollment_id " +
+                    "  LEFT JOIN courses c ON c.id = e.course_id " +
+                    " WHERE p.id = ? FOR UPDATE OF p")) {
                 stmt.setInt(1, paymentId);
                 ResultSet rs = stmt.executeQuery();
                 if (!rs.next()) {
@@ -335,10 +503,19 @@ public class AdminMockInterviewHandler extends AbstractHttpHandler {
                     return;
                 }
                 paymentStatus = rs.getString("payment_status");
-                bookingId = rs.getInt("booking_id");
-                bookingStatus = rs.getString("booking_status");
-                slotId = rs.getInt("slot_id");
-                slotLink = rs.getString("meeting_link");
+                isBooking = rs.getObject("booking_id") != null;
+
+                if (isBooking) {
+                    bookingId = rs.getInt("booking_id");
+                    purchaseStatus = rs.getString("booking_status");
+                    slotId = rs.getInt("slot_id");
+                    meetingLink = rs.getString("slot_link");
+                } else {
+                    enrollmentId = rs.getInt("enrollment_id");
+                    purchaseStatus = rs.getString("enrollment_status");
+                    courseId = rs.getInt("course_id");
+                    meetingLink = rs.getString("course_link");
+                }
             }
 
             if (action.equals("verify")) {
@@ -352,9 +529,10 @@ public class AdminMockInterviewHandler extends AbstractHttpHandler {
                     sendError(exchange, 409, "Only a submitted payment can be verified (current: " + paymentStatus + ").");
                     return;
                 }
-                if ("expired".equals(bookingStatus) || "cancelled".equals(bookingStatus)) {
+                if ("expired".equals(purchaseStatus) || "cancelled".equals(purchaseStatus)) {
                     conn.rollback();
-                    sendError(exchange, 409, "This booking is " + bookingStatus + " — refund the student instead of verifying.");
+                    sendError(exchange, 409, "This purchase is " + purchaseStatus
+                            + " — refund the student instead of verifying.");
                     return;
                 }
 
@@ -364,28 +542,42 @@ public class AdminMockInterviewHandler extends AbstractHttpHandler {
                     stmt.setInt(2, paymentId);
                     stmt.executeUpdate();
                 }
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE bookings SET status = 'confirmed', hold_expires_at = NULL, " +
-                        "       meeting_link = COALESCE(meeting_link, ?) WHERE id = ?")) {
-                    stmt.setString(1, slotLink);
-                    stmt.setInt(2, bookingId);
-                    stmt.executeUpdate();
-                }
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE mentor_slots SET status = 'booked' WHERE id = ?")) {
-                    stmt.setInt(1, slotId);
-                    stmt.executeUpdate();
+
+                if (isBooking) {
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "UPDATE bookings SET status = 'confirmed', hold_expires_at = NULL, " +
+                            "       meeting_link = COALESCE(meeting_link, ?) WHERE id = ?")) {
+                        stmt.setString(1, meetingLink);
+                        stmt.setInt(2, bookingId);
+                        stmt.executeUpdate();
+                    }
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "UPDATE mentor_slots SET status = 'booked' WHERE id = ?")) {
+                        stmt.setInt(1, slotId);
+                        stmt.executeUpdate();
+                    }
+                } else {
+                    // The seat was already claimed at enrollment time, so activating
+                    // must not touch enrolled_count again.
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "UPDATE enrollments SET status = 'active', hold_expires_at = NULL WHERE id = ?")) {
+                        stmt.setInt(1, enrollmentId);
+                        stmt.executeUpdate();
+                    }
                 }
 
                 conn.commit();
                 committed = true;
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
-                response.put("booking_status", "confirmed");
-                response.put("meeting_link_set", slotLink != null);
-                response.put("message", slotLink != null
-                        ? "Payment verified and the booking is confirmed."
-                        : "Payment verified. The mentor still needs to add a meeting link for this booking.");
+                response.put("kind", isBooking ? "booking" : "enrollment");
+                response.put("purchase_status", isBooking ? "confirmed" : "active");
+                response.put("meeting_link_set", meetingLink != null);
+                response.put("message", meetingLink != null
+                        ? (isBooking ? "Payment verified and the booking is confirmed."
+                                     : "Payment verified — the student now has access to the classroom.")
+                        : (isBooking ? "Payment verified. The mentor still needs to add a meeting link for this booking."
+                                     : "Payment verified. The instructor has not set a class link for this course yet."));
                 sendJSON(exchange, 200, response);
 
             } else if (action.equals("reject")) {
@@ -395,23 +587,46 @@ public class AdminMockInterviewHandler extends AbstractHttpHandler {
                     stmt.setInt(2, paymentId);
                     stmt.executeUpdate();
                 }
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE bookings SET status = 'cancelled', hold_expires_at = NULL " +
-                        " WHERE id = ? AND status IN ('pending_payment', 'payment_review')")) {
-                    stmt.setInt(1, bookingId);
-                    stmt.executeUpdate();
-                }
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE mentor_slots SET status = 'open' WHERE id = ? AND start_at > NOW() AND status = 'held'")) {
-                    stmt.setInt(1, slotId);
-                    stmt.executeUpdate();
+
+                if (isBooking) {
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "UPDATE bookings SET status = 'cancelled', hold_expires_at = NULL " +
+                            " WHERE id = ? AND status IN ('pending_payment', 'payment_review')")) {
+                        stmt.setInt(1, bookingId);
+                        stmt.executeUpdate();
+                    }
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "UPDATE mentor_slots SET status = 'open' WHERE id = ? AND start_at > NOW() AND status = 'held'")) {
+                        stmt.setInt(1, slotId);
+                        stmt.executeUpdate();
+                    }
+                } else {
+                    // Free the seat, but only if this enrollment was still holding
+                    // one — a second reject must not decrement twice.
+                    int released;
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "UPDATE enrollments SET status = 'cancelled', hold_expires_at = NULL " +
+                            " WHERE id = ? AND status IN ('pending_payment', 'payment_review')")) {
+                        stmt.setInt(1, enrollmentId);
+                        released = stmt.executeUpdate();
+                    }
+                    if (released > 0) {
+                        try (PreparedStatement stmt = conn.prepareStatement(
+                                "UPDATE courses SET enrolled_count = GREATEST(enrolled_count - 1, 0), " +
+                                "       updated_at = NOW() WHERE id = ?")) {
+                            stmt.setInt(1, courseId);
+                            stmt.executeUpdate();
+                        }
+                    }
                 }
 
                 conn.commit();
                 committed = true;
                 sendJSON(exchange, 200, Map.of(
                         "success", true,
-                        "message", "Payment rejected. The booking was cancelled and the slot released."));
+                        "message", isBooking
+                                ? "Payment rejected. The booking was cancelled and the slot released."
+                                : "Payment rejected. The enrollment was cancelled and the seat released."));
 
             } else {
                 try (PreparedStatement stmt = conn.prepareStatement(

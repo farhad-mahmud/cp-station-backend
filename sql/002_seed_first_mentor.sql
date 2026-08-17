@@ -21,10 +21,10 @@ INSERT INTO mentor_stacks (mentor_id, stack)
 SELECT m.id, 'DSA & Problem Solving' FROM mentors m WHERE m.user_id = 1
 ON CONFLICT (mentor_id, stack) DO NOTHING;
 
--- Three one-hour slots at 20:00, 21:00 and 22:00 Asia/Dhaka (UTC+6) on the
+-- Three 30-minute slots at 20:00, 21:00 and 22:00 Asia/Dhaka (UTC+6) on the
 -- next three days, so they read as evening sessions to a Bangladeshi student.
 INSERT INTO mentor_slots (mentor_id, start_at, end_at, status)
-SELECT m.id, slot.start_at, slot.start_at + interval '1 hour', 'open'
+SELECT m.id, slot.start_at, slot.start_at + interval '30 minutes', 'open'
   FROM mentors m
   CROSS JOIN (
       VALUES

@@ -24,10 +24,9 @@ public class ManualBkashGateway implements PaymentGateway {
     }
 
     @Override
-    public PaymentIntent initiate(int bookingId, int amountBdt, String idempotencyKey) {
+    public PaymentIntent initiate(String reference, int amountBdt, String idempotencyKey) {
         String merchantNumber = Env.get("BKASH_MERCHANT_NUMBER", "01XXXXXXXXX");
         String accountType = Env.get("BKASH_ACCOUNT_TYPE", "Personal");
-        String reference = "CPS-" + bookingId;
 
         Map<String, String> steps = new LinkedHashMap<>();
         steps.put("method", "bKash Send Money");
